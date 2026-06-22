@@ -53,7 +53,8 @@ int main(int argc, char** argv) {
     (void)argc; (void)argv;
     int rank = 0, nranks = 1;
 #ifdef USE_MPI
-    MPI_Init(&argc, &argv);
+    int provided = 0;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nranks);
 #endif
@@ -69,7 +70,10 @@ int main(int argc, char** argv) {
           double v = g.uniform() * 2.0 - 1.0;
           P.Q[(size_t)i*P.N+j] = v; P.Q[(size_t)j*P.N+i] = v; } }
 
-    const double BUDGET = 5.0;   // 本選では制限時間 -10 秒に設定
+#ifndef BUDGET_SEC
+#define BUDGET_SEC 5.0
+#endif
+    const double BUDGET = BUDGET_SEC;   // 本選では make fugaku BUDGET_SEC=1750
     const double SYNC   = 0.5;   // この秒ごとに全体ベストを集約
     const double t_end  = wtime() + BUDGET;
 

@@ -39,8 +39,11 @@ int main(int argc, char** argv) {
 
     // ===== 課題パラメータ (ここを書き換える) =============================
     const int H = 8192, W = 8192;     // 全体格子サイズ
-    const int STEPS = 200;            // 時間ステップ数
+    const int STEPS = 200;            // 時間ステップ数 (deadline 超過時は途中で break)
     const float D = 0.20f, dt = 1.0f; // 拡散係数・時間刻み
+#ifndef BUDGET_SEC
+#define BUDGET_SEC 5.0
+#endif
     // ===================================================================
 
     // 行を各ランクに分配 (余りは先頭ランクへ)
@@ -62,6 +65,7 @@ int main(int argc, char** argv) {
         for (int j = W / 4; j < 3 * W / 4; ++j) a[1 * stride + j] = 1.0f;
 
     double t0 = wtime();
+    const double deadline = t0 + BUDGET_SEC;
 
     for (int step = 0; step < STEPS; ++step) {
         // ---- ハロ交換 (Irecv/Isend → Waitall) ----
@@ -89,6 +93,11 @@ int main(int argc, char** argv) {
             }
         }
         std::swap(a, b);
+        // deadline チェック: STEPS 完了前に時間切れになっても出力を保証する
+        if (step % 10 == 0 && wtime() > deadline) {
+            if (rank == 0) std::printf("[stencil] deadline reached at step %d/%d\n", step+1, STEPS);
+            break;
+        }
     }
 
     // 全格子の総和を確認用に集約

@@ -4,13 +4,16 @@
 #   富岳 (mpiFCC) : make fugaku   → build/fugaku/{skeleton,stencil,search}
 # =====================================================================
 
+# ---------- 時間予算オーバーライド: make fugaku BUDGET_SEC=1750 ----------
+BUDGET_OVERRIDE = $(if $(BUDGET_SEC),-DBUDGET_SEC=$(BUDGET_SEC),)
+
 # ---------- ローカル検証用 (MPI なし) ----------
 CXX_LOCAL    = g++
-FLAGS_LOCAL  = -std=c++17 -O2 -fopenmp -Wall -Wextra -Isrc
+FLAGS_LOCAL  = -std=c++17 -O2 -fopenmp -Wall -Wextra -Isrc $(BUDGET_OVERRIDE)
 
 # ---------- 富岳提出用 (mpiFCC / DUSE_MPI) ----------
 CXX_FUGAKU   = mpiFCC
-FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512 -DUSE_MPI -Isrc
+FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512 -DUSE_MPI -Isrc $(BUDGET_OVERRIDE)
 
 .PHONY: all fugaku \
         skeleton stencil search \

@@ -52,7 +52,10 @@ int main(int argc, char** argv) {
     // ハイブリッド課題用スロット: ステンシル評価 + SA を組み合わせる場合は
     //   stencil.cpp のカーネル関数を切り出してここから呼ぶ
 
-    const double BUDGET = 5.0;           // 本選では制限時間 -10 秒に設定
+#ifndef BUDGET_SEC
+#define BUDGET_SEC 5.0
+#endif
+    const double BUDGET = BUDGET_SEC;    // 本選では make fugaku BUDGET_SEC=1750
     const double deadline = wtime() + BUDGET;
     long long local_count = 0;
     double t0 = wtime();
