@@ -2,10 +2,15 @@ import subprocess
 import random
 import sys
 
+# CUSTOMIZE: gen_case() を本選の課題入力形式に合わせて書き換えること。
+# FAST  = build/fast (= build/skeleton のシム) — MPI なしで動く最適解
+# NAIVE = build/naive — 愚直 O(N²) 実装。出力が一致するか比較する。
+
 FAST = "./build/fast"
 NAIVE = "./build/naive"
 
 def gen_case():
+    # CUSTOMIZE: 課題の入力形式に合わせてここを書き換える
     n = random.randint(1, 8)
     a = [random.randint(0, 10) for _ in range(n)]
     return str(n) + "\n" + " ".join(map(str, a)) + "\n"
