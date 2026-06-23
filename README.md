@@ -127,7 +127,9 @@ tools/fugaku-run.sh stencil <BUDGET_SEC>
 
 > **注意**: `src/main.cpp` は存在しない。テンプレートを直接編集する。  
 > 各テンプレ冒頭の `🎯 当日の手順` に「どこを触るか・何を忘れないか」を集約済み。  
-> `make stress` / `make test` は課題の solver 実装後に使う（現状は動作しない）。
+> I/O 配線は `src/contest.cpp`（fastio の読む→解く→書く雛形）で実証済み。  
+> `make test-contest` / `bash tests/judge.sh tests` が動く（`*.in`/`*.out` を足すと一括判定）。  
+> `make stress` は `solver_naive.cpp` に愚直解を書いてから使う（現状は空スタブ）。
 
 ---
 
@@ -142,6 +144,7 @@ final-prep/
 │   ├── stencil.cpp         # ステンシル/CA (2D行分割・通信/計算オーバーラップ)
 │   ├── stencil_blocked.cpp # 温度ブロッキング版 (メモリ律速時の伸び代。plain と結果一致を検証済)
 │   ├── search.cpp          # 並列SA (xoshiro256** / MPI_MAXLOC+Bcast)
+│   ├── contest.cpp         # 当日雛形 (fastio I/O 配線の実証サンプル。当日 solve を差し替え)
 │   └── solver_naive.cpp    # 愚直解プレースホルダ (stress.py 用)
 ├── tools/
 │   ├── fugaku-run.sh       # ワンショット実行 (sync→submit→wait→fetch)
