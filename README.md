@@ -1,7 +1,7 @@
 # SuperCon2026 本選 テンプレートリポジトリ
 
 富岳（A64FX）向け MPI + OpenMP ハイブリッド最適化テンプレート。  
-8月末本選（30分制限）で即座に使い始めるための構成一式。
+8月末本選で即座に使い始めるための構成一式（提出プログラムには実行時間制限あり。値は当日確認）。
 
 ---
 
@@ -13,9 +13,9 @@
 | ノード構成 | 1ノード = 48コア = 4CMG × 12コア |
 | メモリ帯域 | HBM2 〜1 TB/s |
 | SIMD幅 | SVE 512bit（float 16レーン、double 8レーン） |
-| 富士通コンパイラ | `mpiFCC -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512` |
-| 推奨実行構成 | `mpiexec -n 4`、`OMP_NUM_THREADS=12 OMP_PROC_BIND=close OMP_PLACES=cores` |
-| 競技時間 | 30分（`BUDGET_SEC=1750` = 30×60 − 50秒マージン） |
+| 富士通コンパイラ | `mpiFCC -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512` |
+| 推奨実行構成 | `#PJM --mpi "max-proc-per-node=4"`（1ランク=1CMG固定）+ `OMP_NUM_THREADS=12 OMP_PROC_BIND=close OMP_PLACES=cores` |
+| 競技時間 | ⚠️ **未確定**。`BUDGET_SEC=1750`（30分想定）は仮の値。**本選初日に実際の実行時間制限を確認して上書きする**こと |
 
 ---
 
@@ -104,19 +104,20 @@ tools/fugaku-run.sh stencil 1750
 
 ```bash
 # 1. 課題を読んでテンプレートを選ぶ（上表参照）
-# 2. 対象ファイルを直接編集
+# 2. 対象ファイルを直接編集（各ファイル冒頭の「🎯 当日の手順」に編集箇所と注意を記載）
 vim src/stencil.cpp   # または search.cpp / skeleton.cpp
 
 # 3. ローカル動作確認（5秒で完了）
 make stencil && ./build/stencil
 
-# 4. 富岳に投入
-tools/fugaku-run.sh stencil 1750
+# 4. 富岳に投入（BUDGET_SEC は当日の実行時間制限に合わせる。1750 は仮）
+tools/fugaku-run.sh stencil <BUDGET_SEC>
 
 # 5. 結果 → AI 解析 → 修正 → 繰り返し
 ```
 
 > **注意**: `src/main.cpp` は存在しない。テンプレートを直接編集する。  
+> 各テンプレ冒頭の `🎯 当日の手順` に「どこを触るか・何を忘れないか」を集約済み。  
 > `make stress` / `make test` は課題の solver 実装後に使う（現状は動作しない）。
 
 ---
@@ -126,9 +127,10 @@ tools/fugaku-run.sh stencil 1750
 ```
 final-prep/
 ├── src/
-│   ├── common.hpp          # wtime() / Rng (xoshiro256**) 共通ヘッダ
+│   ├── common.hpp          # wtime() / Rng (xoshiro256**) 共通ヘッダ (一元管理)
+│   ├── utilities.hpp       # 競技用 fastio / Budget / bit演算 (common.hpp を内包)
 │   ├── skeleton.cpp        # 汎用スケルトン (MPI+OMP+時間予算)
-│   ├── stencil.cpp         # ステンシル/CA (2D行分割・Irecv/Isend)
+│   ├── stencil.cpp         # ステンシル/CA (2D行分割・通信/計算オーバーラップ)
 │   ├── search.cpp          # 並列SA (xoshiro256** / MPI_MAXLOC+Bcast)
 │   └── solver_naive.cpp    # 愚直解プレースホルダ (stress.py 用)
 ├── tools/
@@ -159,14 +161,18 @@ final-prep/
 
 ## A64FX 最適化チェックリスト
 
+- [ ] `--mpi "max-proc-per-node=4"` で 1ランク=1CMG 固定（崩れると first-touch の局所性が壊れ帯域が出ない）
 - [ ] first-touch 並列初期化（忘れると HBM 帯域が半分以下）
+- [ ] リーディング次元を 2 のべきにしない（stride パディングでキャッシュセット衝突回避。stencil 実装済み）
 - [ ] unit-stride アクセス（内側ループが j 方向で SVE 化される）
 - [ ] `__restrict` 付与で別名なしを明示
-- [ ] `#pragma omp simd` で内側ループをベクトル化
-- [ ] `Irecv` → 内部計算 → `Waitall` の順で通信/計算オーバーラップ
+- [ ] `#pragma omp simd` で内側ループをベクトル化（分岐レス化も忘れず。search の `delta()` 参照）
+- [ ] `-Kzfill` で書き込み専用ストリームの read-for-ownership を省く（Makefile 設定済み）
+- [ ] `Irecv` → 内部計算 → `Waitall` の順で通信/計算オーバーラップ（stencil 実装済み）
 - [ ] 評価を差分 `delta()` で行う（全評価 O(N²) を避ける）
 - [ ] `MPI_MAXLOC` + `Bcast` で全体ベストを効率的に同期
-- [ ] `BUDGET_SEC=1750` で make fugaku（時間内に必ず出力）
+- [ ] 入力が 8MB 超なら `utilities.hpp` の `IBUF_SIZE` を増やす（既定 64MB。超過時は stderr 警告）
+- [ ] `BUDGET_SEC` は当日の実行時間制限を確認して `make fugaku BUDGET_SEC=…` で上書き（時間内に必ず出力）
 
 ---
 
