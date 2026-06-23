@@ -125,7 +125,17 @@ int main(int argc, char** argv) {
         MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
         MPI_Bcast(best.data(), P.N, MPI_UNSIGNED_CHAR, out.r, MPI_COMM_WORLD);
         best_score = out.v;
-        if (rank == 0) { /* ここで best を提出ファイルに保存 */ }
+        if (rank == 0) {
+            // CUSTOMIZE: 課題の出力形式に合わせて変更する
+            FILE* fp = fopen("result.txt", "w");
+            if (fp) {
+                fprintf(fp, "%.6f\n", best_score);
+                // 解ベクターの書き出し例:
+                // for (int i = 0; i < P.N; ++i) fprintf(fp, "%d", best[i]);
+                // fprintf(fp, "\n");
+                fclose(fp);
+            }
+        }
 #endif
         t_sync = wtime() + SYNC;
     }

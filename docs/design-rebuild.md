@@ -162,15 +162,29 @@ CXXFLAGS_LOCAL_MPI = $(CXXFLAGS_LOCAL) -DUSE_MPI
 | E: データ探索 | `search.cpp` or `skeleton.cpp` ベース |
 | ハイブリッド (最有力 2026 予想) | `skeleton.cpp` + `stencil.cpp` カーネルを SA の評価関数に流用 |
 
-### 当日コピー手順
+### 当日編集手順
 
-```
-1. git checkout main && git pull
-2. cp src/stencil.cpp src/main.cpp   # または search.cpp
-3. # Problem 構造体 / 更新カーネルを課題に合わせて書き換え
-4. make                              # ローカル動作確認
-5. make fugaku                       # 富岳提出ビルド
-6. mpiexec -n 4 ./build/fugaku/skeleton
+> **注意**: `src/main.cpp` は存在しない。テンプレートを直接編集するか、
+> 別名にコピーして Makefile に追記する。
+
+```bash
+# 1. 最新コードを取得
+git checkout main && git pull
+
+# 2. 課題タイプに合うテンプレートを直接編集
+#    組合せ最適化 → src/search.cpp の Problem 構造体と delta() を書き換え
+#    ステンシル/CA → src/stencil.cpp の更新カーネル (lap+react) を書き換え
+#    その他/ハイブリッド → src/skeleton.cpp をベースに実装
+
+# 3. ローカルで動作確認
+make stencil         # または make search / make skeleton
+./build/stencil      # 出力: [stencil] sum=... steps=.../... ...s
+
+# 4. 富岳へ転送・ビルド・投入 (ワンコマンド)
+tools/fugaku-run.sh stencil 1750
+# → results/latest/stdout.txt と meta.json に結果が届く
+
+# 5. 結果を見てコードを修正し、繰り返す
 ```
 
 ---

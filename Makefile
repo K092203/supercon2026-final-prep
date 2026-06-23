@@ -64,6 +64,8 @@ naive:
 
 run: test-skeleton
 
+# 注意: test / stress は課題確定後に gen_case() と solver を実装してから使う。
+# 現状の build/fast (skeleton) は stdin を無視するため有意なテストにならない。
 test: fast
 	./build/fast < cases/sample.in
 

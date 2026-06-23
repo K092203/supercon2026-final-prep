@@ -1,0 +1,175 @@
+# SuperCon2026 本選 テンプレートリポジトリ
+
+富岳（A64FX）向け MPI + OpenMP ハイブリッド最適化テンプレート。  
+8月末本選（30分制限）で即座に使い始めるための構成一式。
+
+---
+
+## ターゲット環境
+
+| 項目 | 値 |
+|---|---|
+| スーパーコンピュータ | 富岳 (A64FX) |
+| ノード構成 | 1ノード = 48コア = 4CMG × 12コア |
+| メモリ帯域 | HBM2 〜1 TB/s |
+| SIMD幅 | SVE 512bit（float 16レーン、double 8レーン） |
+| 富士通コンパイラ | `mpiFCC -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512` |
+| 推奨実行構成 | `mpiexec -n 4`、`OMP_NUM_THREADS=12 OMP_PROC_BIND=close OMP_PLACES=cores` |
+| 競技時間 | 30分（`BUDGET_SEC=1750` = 30×60 − 50秒マージン） |
+
+---
+
+## テンプレート選択指針
+
+| 課題タイプ | 使用テンプレート | ポイント |
+|---|---|---|
+| 組合せ最適化（配置・スケジューリング） | `src/search.cpp` | `Problem` 構造体と `delta()` を差し替え |
+| ステンシル / CA / 反応拡散 | `src/stencil.cpp` | 更新カーネル（lap+react）を差し替え |
+| 粒子N体 / 線形代数 | `src/skeleton.cpp` | ループ本体を実装 |
+| ハイブリッド（SA + ステンシル評価） | `skeleton.cpp` ベース | stencil のカーネル関数を切り出して流用 |
+
+---
+
+## ローカルビルドと動作確認
+
+```bash
+# 全テンプレートをビルド (g++ / OpenMP / MPI なし)
+make
+
+# 個別ビルドと実行
+make skeleton && ./build/skeleton
+make stencil  && ./build/stencil
+make search   && ./build/search
+
+# 富岳提出用ビルド (mpiFCC / USE_MPI / SVE)
+make fugaku
+
+# クリーン
+make clean
+```
+
+**ローカル実行の出力例:**
+
+```
+[env] ranks=1 threads/rank=12 total_cores=12 host=your-host
+[result] in_circle=25746986855  elapsed=5.000s    # skeleton (Monte Carlo)
+[stencil] sum=1.234567e+03  steps=200/200  5.001s # stencil
+[search] best=12.345678  ranks=1 threads=12       # search
+```
+
+---
+
+## 富岳での実行（本選フロー）
+
+### 初回セットアップ（本選初日 1 回のみ）
+
+```bash
+# 1. SSH config 追記（HostName と User を実際の値に書き換える）
+cat docs/fugaku-ssh-template.txt >> ~/.ssh/config
+chmod 600 ~/.ssh/config
+
+# 2. アカウント設定ファイルを作成
+cp tools/fugaku-config.env.template tools/fugaku-config.env
+# FUGAKU_USER / FUGAKU_GROUP / FUGAKU_RSCGRP / FUGAKU_REMOTE_DIR を埋める
+
+# 3. 富岳側ディレクトリ作成
+ssh fugaku "mkdir -p ~/supercon2026/final-prep/results"
+
+# 4. ControlMaster 確立（OTP があればここで入力。以降 4時間不要）
+ssh fugaku "echo 'OK'"
+
+# 5. 動作確認（sync + build のみ）
+tools/fugaku-sync.sh 5
+```
+
+詳細: [docs/fugaku-workflow.md](docs/fugaku-workflow.md)
+
+### 通常の開発ループ
+
+```bash
+# ワンショット: 転送 → ビルド → ジョブ投入 → 待機 → 結果回収
+tools/fugaku-run.sh stencil 1750
+
+# 結果を確認
+cat results/latest/stdout.txt
+cat results/latest/meta.json
+
+# コードを修正して再実行
+tools/fugaku-run.sh stencil 1750
+```
+
+---
+
+## 本選当日の手順
+
+```bash
+# 1. 課題を読んでテンプレートを選ぶ（上表参照）
+# 2. 対象ファイルを直接編集
+vim src/stencil.cpp   # または search.cpp / skeleton.cpp
+
+# 3. ローカル動作確認（5秒で完了）
+make stencil && ./build/stencil
+
+# 4. 富岳に投入
+tools/fugaku-run.sh stencil 1750
+
+# 5. 結果 → AI 解析 → 修正 → 繰り返し
+```
+
+> **注意**: `src/main.cpp` は存在しない。テンプレートを直接編集する。  
+> `make stress` / `make test` は課題の solver 実装後に使う（現状は動作しない）。
+
+---
+
+## ディレクトリ構造
+
+```
+final-prep/
+├── src/
+│   ├── common.hpp          # wtime() / Rng (xoshiro256**) 共通ヘッダ
+│   ├── skeleton.cpp        # 汎用スケルトン (MPI+OMP+時間予算)
+│   ├── stencil.cpp         # ステンシル/CA (2D行分割・Irecv/Isend)
+│   ├── search.cpp          # 並列SA (xoshiro256** / MPI_MAXLOC+Bcast)
+│   └── solver_naive.cpp    # 愚直解プレースホルダ (stress.py 用)
+├── tools/
+│   ├── fugaku-run.sh       # ワンショット実行 (sync→submit→wait→fetch)
+│   ├── fugaku-sync.sh      # rsync + ログインノードビルド
+│   ├── fugaku-submit.sh    # pjsub 投入
+│   ├── fugaku-wait.sh      # pjstat ポーリング
+│   ├── fugaku-fetch.sh     # 結果回収
+│   ├── fugaku-config.env.template  # アカウント設定テンプレート
+│   ├── stress.py           # Fast vs Naive 比較（課題実装後に使用）
+│   └── benchmark.py        # Fast の速度計測
+├── jobs/                   # pjsub 参照テンプレート
+├── cases/
+│   └── sample.in           # ダミー入力（課題に合わせて書き換え）
+├── docs/
+│   ├── fugaku-workflow.md  # 富岳インフラ詳細設計
+│   ├── fugaku-ssh-template.txt
+│   ├── design-rebuild.md   # テンプレート設計ドキュメント
+│   ├── problem_notes.md    # 本選当日の課題メモ（空、当日記入）
+│   └── experiments.md      # 最適化実験ログ（空、当日記入）
+├── results/                # .gitignore済み（富岳結果が届く場所）
+├── build/                  # .gitignore済み
+├── Makefile
+└── CLAUDE.md
+```
+
+---
+
+## A64FX 最適化チェックリスト
+
+- [ ] first-touch 並列初期化（忘れると HBM 帯域が半分以下）
+- [ ] unit-stride アクセス（内側ループが j 方向で SVE 化される）
+- [ ] `__restrict` 付与で別名なしを明示
+- [ ] `#pragma omp simd` で内側ループをベクトル化
+- [ ] `Irecv` → 内部計算 → `Waitall` の順で通信/計算オーバーラップ
+- [ ] 評価を差分 `delta()` で行う（全評価 O(N²) を避ける）
+- [ ] `MPI_MAXLOC` + `Bcast` で全体ベストを効率的に同期
+- [ ] `BUDGET_SEC=1750` で make fugaku（時間内に必ず出力）
+
+---
+
+## ライセンス
+
+競技用リポジトリ（非公開）

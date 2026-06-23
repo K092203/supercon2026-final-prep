@@ -29,8 +29,9 @@ int main(int argc, char** argv) {
     (void)argc; (void)argv;
     int rank = 0, nranks = 1;
 #ifdef USE_MPI
+    int provided = 0;
     int up = -1, down = -1;
-    MPI_Init(&argc, &argv);
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nranks);
     up   = (rank == 0)          ? MPI_PROC_NULL : rank - 1;
@@ -67,7 +68,9 @@ int main(int argc, char** argv) {
     double t0 = wtime();
     const double deadline = t0 + BUDGET_SEC;
 
+    int final_step = 0;
     for (int step = 0; step < STEPS; ++step) {
+        final_step = step + 1;
         // ---- ハロ交換 (Irecv/Isend → Waitall) ----
         // 最適化メモ: Waitall を内部セル更新後に移動すると通信/計算オーバーラップが可能
 #ifdef USE_MPI
@@ -113,7 +116,7 @@ int main(int argc, char** argv) {
 #endif
     double elapsed = wtime() - t0;
     if (rank == 0)
-        std::printf("[stencil] sum=%.6e  steps=%d  %.3fs\n", total, STEPS, elapsed);
+        std::printf("[stencil] sum=%.6e  steps=%d/%d  %.3fs\n", total, final_step, STEPS, elapsed);
 
 #ifdef USE_MPI
     MPI_Finalize();
