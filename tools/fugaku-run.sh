@@ -4,6 +4,35 @@
 #   target:     skeleton | stencil | search
 #   budget_sec: 時間予算 (秒)。デフォルト 1750 (本選 30分 - 10秒マージン)
 #
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 本戦初日セットアップ (初回のみ。以降は不要)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 1. SSH config 追記
+#      cat docs/fugaku-ssh-template.txt >> ~/.ssh/config
+#      # HostName と User を実際の値に書き換える
+#
+# 2. アカウント設定ファイルを作成 (4項目を埋める)
+#      cp tools/fugaku-config.env.template tools/fugaku-config.env
+#      # FUGAKU_USER   … 富岳アカウント名
+#      # FUGAKU_GROUP  … PJM グループ
+#      # FUGAKU_RSCGRP … リソースグループ (例: small)
+#      # FUGAKU_REMOTE_DIR … /home/your_account/supercon2026/final-prep
+#
+# 3. 富岳側ディレクトリ作成
+#      ssh fugaku "mkdir -p ~/supercon2026/final-prep/results"
+#
+# 4. ControlMaster を確立 (OTP がある場合はここで入力。以降 4h 不要)
+#      ssh fugaku "echo 'connection OK'"
+#
+# 5. 動作確認 (sync + build のみ、ジョブ投入なし)
+#      tools/fugaku-sync.sh 5
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# 通常の開発ループ (上記セットアップ完了後):
+#   tools/fugaku-run.sh skeleton 1750
+#   → results/latest/stdout.txt と meta.json を Claude Code に読ませる
+#   → src/ を修正して再実行
+#
 # 実行フロー:
 #   [1] rsync + ログインノードビルド  (fugaku-sync.sh)
 #   [2] pjsub 投入                   (fugaku-submit.sh)
