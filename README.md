@@ -158,8 +158,8 @@ final-prep/
 │   ├── fugaku-workflow.md  # 富岳インフラ詳細設計
 │   ├── fugaku-ssh-template.txt
 │   ├── design-rebuild.md   # テンプレート設計ドキュメント
-│   ├── problem_notes.md    # 本選当日の課題メモ（空、当日記入）
-│   └── experiments.md      # 最適化実験ログ（空、当日記入）
+│   ├── problem_notes.md    # 当日プレイブック（初動手順 + テンプレ選択ツリー + 記入欄）
+│   └── experiments.md      # 最適化レシピ集（ROI順）+ 実験ログ表
 ├── results/                # .gitignore済み（富岳結果が届く場所）
 ├── build/                  # .gitignore済み
 ├── Makefile
