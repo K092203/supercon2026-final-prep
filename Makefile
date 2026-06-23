@@ -17,14 +17,14 @@ CXX_FUGAKU   = mpiFCC
 FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512 -DUSE_MPI -Isrc $(BUDGET_OVERRIDE)
 
 .PHONY: all fugaku fugaku-run \
-        skeleton stencil search \
+        skeleton stencil stencil-blocked search \
         test-skeleton test-stencil test-search \
         local-mpi test-mpi \
         contest contest-fugaku test-contest \
         fast naive run test stress bench clean
 
-# ---------- デフォルト: ローカル 3 バイナリ ----------
-all: skeleton stencil search
+# ---------- デフォルト: ローカル 4 バイナリ ----------
+all: skeleton stencil stencil-blocked search
 
 skeleton:
 	mkdir -p build
@@ -33,6 +33,11 @@ skeleton:
 stencil:
 	mkdir -p build
 	$(CXX_LOCAL) $(FLAGS_LOCAL) src/stencil.cpp -o build/stencil
+
+# 温度ブロッキング版 (メモリ律速ステンシルの伸び代。BT/RB/CB は実機で調整)
+stencil-blocked:
+	mkdir -p build
+	$(CXX_LOCAL) $(FLAGS_LOCAL) src/stencil_blocked.cpp -o build/stencil_blocked
 
 search:
 	mkdir -p build
@@ -61,9 +66,10 @@ FLAGS_MPI  = -std=c++17 -O2 -fopenmp -Wall -Wextra -DUSE_MPI -Isrc $(BUDGET_OVER
 
 local-mpi:
 	mkdir -p build/mpi
-	$(CXX_MPI) $(FLAGS_MPI) src/skeleton.cpp -o build/mpi/skeleton
-	$(CXX_MPI) $(FLAGS_MPI) src/stencil.cpp  -o build/mpi/stencil
-	$(CXX_MPI) $(FLAGS_MPI) src/search.cpp   -o build/mpi/search
+	$(CXX_MPI) $(FLAGS_MPI) src/skeleton.cpp        -o build/mpi/skeleton
+	$(CXX_MPI) $(FLAGS_MPI) src/stencil.cpp         -o build/mpi/stencil
+	$(CXX_MPI) $(FLAGS_MPI) src/stencil_blocked.cpp -o build/mpi/stencil_blocked
+	$(CXX_MPI) $(FLAGS_MPI) src/search.cpp          -o build/mpi/search
 
 test-mpi:
 	bash tools/check-mpi.sh
@@ -71,9 +77,10 @@ test-mpi:
 # ---------- 富岳提出ビルド ----------
 fugaku:
 	mkdir -p build/fugaku
-	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/skeleton.cpp -o build/fugaku/skeleton
-	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/stencil.cpp  -o build/fugaku/stencil
-	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/search.cpp   -o build/fugaku/search
+	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/skeleton.cpp        -o build/fugaku/skeleton
+	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/stencil.cpp         -o build/fugaku/stencil
+	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/stencil_blocked.cpp -o build/fugaku/stencil_blocked
+	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/search.cpp          -o build/fugaku/search
 
 # ---------- 個別テスト (シングルプロセス / MPI ランタイム不要) ----------
 test-skeleton: skeleton

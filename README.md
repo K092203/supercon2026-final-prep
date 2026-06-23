@@ -40,6 +40,7 @@ make
 make skeleton && ./build/skeleton
 make stencil  && ./build/stencil
 make search   && ./build/search
+make stencil-blocked && ./build/stencil_blocked   # 温度ブロッキング版 (メモリ律速ステンシル用)
 
 # MPI 経路の事前検証 (富岳に投げる前に 4 ランクで確認)
 #   要 OpenMPI: sudo apt-get install -y openmpi-bin libopenmpi-dev
@@ -139,6 +140,7 @@ final-prep/
 │   ├── utilities.hpp       # 競技用 fastio / Budget / bit演算 (common.hpp を内包)
 │   ├── skeleton.cpp        # 汎用スケルトン (MPI+OMP+時間予算)
 │   ├── stencil.cpp         # ステンシル/CA (2D行分割・通信/計算オーバーラップ)
+│   ├── stencil_blocked.cpp # 温度ブロッキング版 (メモリ律速時の伸び代。plain と結果一致を検証済)
 │   ├── search.cpp          # 並列SA (xoshiro256** / MPI_MAXLOC+Bcast)
 │   └── solver_naive.cpp    # 愚直解プレースホルダ (stress.py 用)
 ├── tools/

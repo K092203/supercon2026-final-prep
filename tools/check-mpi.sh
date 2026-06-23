@@ -27,14 +27,15 @@ export OMP_NUM_THREADS=2   # ローカルはコアが少ないのでランクあ
 mkdir -p build/mpi
 echo "== compiling (mpic++) =="
 # stencil は 200 steps を必ず完了させたいので予算を大きく、計測系は短く
-mpic++ $FLAGS -DBUDGET_SEC=120 src/stencil.cpp  -o build/mpi/stencil  || exit 1
-mpic++ $FLAGS -DBUDGET_SEC=3   src/skeleton.cpp -o build/mpi/skeleton || exit 1
-mpic++ $FLAGS -DBUDGET_SEC=3   src/search.cpp   -o build/mpi/search   || exit 1
+mpic++ $FLAGS -DBUDGET_SEC=120 src/stencil.cpp         -o build/mpi/stencil         || exit 1
+mpic++ $FLAGS -DBUDGET_SEC=120 src/stencil_blocked.cpp -o build/mpi/stencil_blocked || exit 1
+mpic++ $FLAGS -DBUDGET_SEC=3   src/skeleton.cpp        -o build/mpi/skeleton        || exit 1
+mpic++ $FLAGS -DBUDGET_SEC=3   src/search.cpp          -o build/mpi/search          || exit 1
 
 FAIL=0
 
 echo ""
-echo "== [1/3] stencil: ハロ交換の正しさ (n=1 と n=4 の最終 sum 一致) =="
+echo "== [1/4] stencil: ハロ交換の正しさ (n=1 と n=4 の最終 sum 一致) =="
 O1=$($MPIRUN -n 1 build/mpi/stencil)
 O4=$($MPIRUN -n 4 build/mpi/stencil)
 S1=$(grep -oP 'sum=\K[0-9.eE+-]+' <<<"$O1")
@@ -51,7 +52,18 @@ else
 fi
 
 echo ""
-echo "== [2/3] skeleton: MPI_Allreduce (n=4 で台数効果 ~4x) =="
+echo "== [2/4] stencil_blocked: 温度ブロッキングが plain と一致するか (n=4) =="
+SB=$(grep -oP 'sum=\K[0-9.eE+-]+' <<<"$($MPIRUN -n 4 build/mpi/stencil_blocked)")
+echo "  plain n=4 sum=$S4 / blocked n=4 sum=$SB"
+if [ -n "$S4" ] && [ -n "$SB" ] && \
+   python3 -c "import sys;a,b=float('$S4'),float('$SB');sys.exit(0 if abs(a-b)/max(abs(a),1e-30)<1e-3 else 1)"; then
+    echo "  [PASS] 温度ブロッキング OK (plain と同一結果)"
+else
+    echo "  [FAIL] blocked が plain と不一致 → タイル/deep-halo にバグ"; FAIL=1
+fi
+
+echo ""
+echo "== [3/4] skeleton: MPI_Allreduce (n=4 で台数効果 ~4x) =="
 C1=$($MPIRUN -n 1 build/mpi/skeleton | grep -oP 'in_circle=\K[0-9]+')
 C4=$($MPIRUN -n 4 build/mpi/skeleton | grep -oP 'in_circle=\K[0-9]+')
 echo "  n=1: count=$C1"
@@ -63,7 +75,7 @@ else
 fi
 
 echo ""
-echo "== [3/3] search: MPI_MAXLOC + Bcast (n=4 デッドロックせず result.txt 出力) =="
+echo "== [4/4] search: MPI_MAXLOC + Bcast (n=4 デッドロックせず result.txt 出力) =="
 rm -f result.txt
 OS=$($MPIRUN -n 4 build/mpi/search)
 echo "  $OS"
