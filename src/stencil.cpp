@@ -31,6 +31,7 @@
 #include <cstdlib>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -75,9 +76,15 @@ int main(int argc, char** argv) {
         float* __restrict pb = &b[(size_t)i * stride];
         for (int j = 0; j < W; ++j) { pa[j] = 0.0f; pb[j] = 0.0f; }
     }
-    // 初期値: 中央ランクの中段に種を撒く
-    if (rank == nranks / 2)
-        for (int j = W / 4; j < 3 * W / 4; ++j) a[1 * stride + j] = 1.0f;
+    // 初期値: global 行 H/2 の中央帯に種を撒く。
+    // ※ global 座標で撒くことで分割数 (nranks) に依存しない初期条件になる。
+    //   → `make test-mpi` で n=1 と n=4 の最終 sum が一致するか比較でき、ハロ交換の正しさを検証できる。
+    int row0_global = rank * base + std::min(rank, rem); // このランク先頭の global 行番号
+    const int seed_grow = H / 2;
+    if (seed_grow >= row0_global && seed_grow < row0_global + lh) {
+        int li = seed_grow - row0_global + 1;            // local 行 (+1 は上ゴースト分)
+        for (int j = W / 4; j < 3 * W / 4; ++j) a[(size_t)li * stride + j] = 1.0f;
+    }
 
     double t0 = wtime();
     const double deadline = t0 + BUDGET_SEC;

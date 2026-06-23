@@ -19,6 +19,7 @@ FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512 -DU
 .PHONY: all fugaku fugaku-run \
         skeleton stencil search \
         test-skeleton test-stencil test-search \
+        local-mpi test-mpi \
         contest contest-fugaku test-contest \
         fast naive run test stress bench clean
 
@@ -50,6 +51,22 @@ contest-fugaku:
 
 test-contest: contest
 	./build/contest < tests/sample_01.in
+
+# ---------- ローカル MPI 検証 (富岳前に MPI 経路を 4 ランクで確認) ----------
+# 要 OpenMPI: sudo apt-get install -y openmpi-bin libopenmpi-dev
+#   make local-mpi  → build/mpi/{skeleton,stencil,search} (mpic++ / -DUSE_MPI)
+#   make test-mpi   → 4 ランクでハロ交換 / MAXLOC+Bcast / Allreduce を自動検証
+CXX_MPI    = mpic++
+FLAGS_MPI  = -std=c++17 -O2 -fopenmp -Wall -Wextra -DUSE_MPI -Isrc $(BUDGET_OVERRIDE)
+
+local-mpi:
+	mkdir -p build/mpi
+	$(CXX_MPI) $(FLAGS_MPI) src/skeleton.cpp -o build/mpi/skeleton
+	$(CXX_MPI) $(FLAGS_MPI) src/stencil.cpp  -o build/mpi/stencil
+	$(CXX_MPI) $(FLAGS_MPI) src/search.cpp   -o build/mpi/search
+
+test-mpi:
+	bash tools/check-mpi.sh
 
 # ---------- 富岳提出ビルド ----------
 fugaku:

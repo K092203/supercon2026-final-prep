@@ -41,12 +41,20 @@ make skeleton && ./build/skeleton
 make stencil  && ./build/stencil
 make search   && ./build/search
 
+# MPI 経路の事前検証 (富岳に投げる前に 4 ランクで確認)
+#   要 OpenMPI: sudo apt-get install -y openmpi-bin libopenmpi-dev
+make test-mpi   # ハロ交換 / MPI_Allreduce / MAXLOC+Bcast を自動 PASS/FAIL 判定
+
 # 富岳提出用ビルド (mpiFCC / USE_MPI / SVE)
 make fugaku
 
 # クリーン
 make clean
 ```
+
+**`make test-mpi` の役割:** MPI のバグ（ハロ交換の境界誤り・集約漏れ・MAXLOC/Bcast のデッドロック）は
+単一プロセスでは絶対に出ず、富岳で初めて発覚してキュー時間を浪費する。ローカル 4 ランクで先に潰す。
+（出力例: `✅ ALL PASS — MPI 経路は健全。富岳へ投入可能。`）
 
 **ローカル実行の出力例:**
 
@@ -140,6 +148,7 @@ final-prep/
 │   ├── fugaku-wait.sh      # pjstat ポーリング
 │   ├── fugaku-fetch.sh     # 結果回収
 │   ├── fugaku-config.env.template  # アカウント設定テンプレート
+│   ├── check-mpi.sh        # ローカル4ランクで MPI 経路を自動検証 (make test-mpi)
 │   ├── stress.py           # Fast vs Naive 比較（課題実装後に使用）
 │   └── benchmark.py        # Fast の速度計測
 ├── jobs/                   # pjsub 参照テンプレート
@@ -161,6 +170,7 @@ final-prep/
 
 ## A64FX 最適化チェックリスト
 
+- [ ] 富岳投入前に `make test-mpi` で MPI 経路（ハロ交換 / Allreduce / MAXLOC+Bcast）を 4 ランク検証
 - [ ] `--mpi "max-proc-per-node=4"` で 1ランク=1CMG 固定（崩れると first-touch の局所性が壊れ帯域が出ない）
 - [ ] first-touch 並列初期化（忘れると HBM 帯域が半分以下）
 - [ ] リーディング次元を 2 のべきにしない（stride パディングでキャッシュセット衝突回避。stencil 実装済み）
