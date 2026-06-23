@@ -13,7 +13,8 @@ FLAGS_LOCAL  = -std=c++17 -O2 -fopenmp -Wall -Wextra -Isrc $(BUDGET_OVERRIDE)
 
 # ---------- 富岳提出用 (mpiFCC / DUSE_MPI) ----------
 CXX_FUGAKU   = mpiFCC
-FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512 -DUSE_MPI -Isrc $(BUDGET_OVERRIDE)
+# -Kzfill: 書き込み専用ストリーム(ステンシルの出力配列)で read-for-ownership を省きHBM帯域を節約
+FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512 -DUSE_MPI -Isrc $(BUDGET_OVERRIDE)
 
 .PHONY: all fugaku fugaku-run \
         skeleton stencil search \

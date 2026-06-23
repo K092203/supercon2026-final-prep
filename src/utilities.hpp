@@ -15,70 +15,18 @@
 //       fastio::flush();           // 末尾で一度だけ: obuf を stdout へ書く
 //   }
 // =====================================================================
-#include <cstdint>
+// wtime() / Rng (xoshiro256**) は common.hpp に一元化する。
+// 二重定義 (contest.cpp が common.hpp と両方 include した場合のコンパイルエラー) を防ぐため
+// ここでは再定義せず common.hpp を取り込む。
+#include "common.hpp"   // -> cstdint / chrono / mpi.h / wtime() / Rng
 #include <cstdio>
 #include <cstring>
 #include <cmath>
 #include <algorithm>
 #include <vector>
-#include <chrono>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-#ifdef USE_MPI
-#include <mpi.h>
-#endif
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// タイマー
-//   MPI 有効時は MPI_Wtime (プロセス間で同期)
-//   それ以外は std::chrono::steady_clock (モノトニック)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-static inline double wtime() {
-#ifdef USE_MPI
-    return MPI_Wtime();
-#else
-    using namespace std::chrono;
-    return duration<double>(steady_clock::now().time_since_epoch()).count();
-#endif
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 高速乱数: xoshiro256** (splitmix64 シード)
-//
-//   設計:
-//     スレッドごとに独立インスタンスを持つ。グローバル共有不可 (競合が起きる)
-//     seed() に (rank*maxth + tid) を渡して完全に独立させる
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-struct Rng {
-    uint64_t s[4];
-
-    static uint64_t sm64(uint64_t& x) {
-        uint64_t z = (x += 0x9E3779B97F4A7C15ULL);
-        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-        z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-        return z ^ (z >> 31);
-    }
-    void seed(uint64_t sd) { for (auto& v : s) v = sm64(sd); }
-
-    static uint64_t rotl(uint64_t x, int k) { return (x << k) | (x >> (64 - k)); }
-    uint64_t next() {
-        uint64_t r = rotl(s[1] * 5, 7) * 9, t = s[1] << 17;
-        s[2] ^= s[0]; s[3] ^= s[1]; s[1] ^= s[2]; s[0] ^= s[3];
-        s[2] ^= t; s[3] = rotl(s[3], 45);
-        return r;
-    }
-    double uniform() { return (next() >> 11) * (1.0 / 9007199254740992.0); } // [0,1)
-
-    // Lemire 法: [0,n) を剰余バイアスなしで返す
-    uint32_t below(uint32_t n) {
-#ifdef __SIZEOF_INT128__
-        return (uint32_t)(((__uint128_t)next() * n) >> 64);
-#else
-        return (uint32_t)((double)next() * n * (1.0 / 18446744073709551616.0));
-#endif
-    }
-};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 超高速 I/O (fread ベース)
@@ -97,15 +45,25 @@ struct Rng {
 //   - 入力が 8MB を超える場合は IBUF_SIZE を増やすこと
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 namespace fastio {
-    static constexpr int IBUF_SIZE = 1 << 23; // 8 MB
-    static constexpr int OBUF_SIZE = 1 << 23; // 8 MB
+    static constexpr int IBUF_SIZE = 1 << 26; // 64 MB (本選の大規模入力に備える。足りなければ増やす)
+    static constexpr int OBUF_SIZE = 1 << 26; // 64 MB
 
     // グローバル静的バッファ: ループ内 malloc/new は一切行わない
     static char ibuf[IBUF_SIZE];
     static char obuf[OBUF_SIZE];
     static int  ipos = 0, ilen = 0, opos = 0;
 
-    inline void init()  { ilen = (int)fread(ibuf, 1, IBUF_SIZE, stdin); }
+    // EOF まで読み切る。単発 fread は 1 回のシステムコール上限で途中打ち切りになり、
+    // 入力が大きいとサイレントに WA を生む。ループで満杯まで読む。
+    inline void init() {
+        ilen = 0;
+        size_t got;
+        while (ilen < IBUF_SIZE &&
+               (got = fread(ibuf + ilen, 1, (size_t)(IBUF_SIZE - ilen), stdin)) > 0)
+            ilen += (int)got;
+        if (ilen >= IBUF_SIZE)
+            fprintf(stderr, "[fastio] WARNING: input filled IBUF_SIZE(%d). 入力切り捨ての恐れ → IBUF_SIZE を増やせ\n", IBUF_SIZE);
+    }
     inline void flush() { fwrite(obuf, 1, (size_t)opos, stdout); opos = 0; }
 
     inline char gc() { return (ipos < ilen) ? ibuf[ipos++] : '\0'; }

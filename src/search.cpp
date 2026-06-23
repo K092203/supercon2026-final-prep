@@ -14,6 +14,16 @@
 //   * 評価は必ず差分 (delta) で。全評価のやり直しをしない
 //   * 提出は何度でも可の運用が多い → SYNC ごとに全体ベストを集約・保存
 // =====================================================================
+// ─────────────────────────────────────────────────────────────────────
+// 🎯 当日の手順 (このファイル = 組合せ最適化/配置/スケジューリング/探索)
+//   ① Problem 構造体を書き換え (cost=全評価デバッグ用, delta=差分評価 O(N))
+//   ② 「問題生成」ブロックを入力読込に置換 (utilities.hpp の fastio)
+//   ③ 「CUSTOMIZE 出力形式」を課題の提出フォーマットに合わせる
+//   ④ 冷却スケジュール (T*=0.999) と近傍操作を課題に合わせて調整
+//   ⑤ make search && ./build/search → tools/fugaku-run.sh search <BUDGET_SEC>
+//   ⚠️ BUDGET_SEC は当日の実行時間制限を確認して上書き (既定1750は仮の値)
+//   ⚠️ delta() は必ず cost() と整合させる (ズレると cur がドリフトし無効解になる)
+// ─────────────────────────────────────────────────────────────────────
 #include "common.hpp"
 #include <cstdio>
 #include <vector>
@@ -41,9 +51,16 @@ struct Problem {
         return s;
     }
     // 差分評価 O(N): ビット i を反転したときのコスト変化
+    //   元の分岐 (if (j!=i && x[j])) は SVE 化を阻害する。
+    //   S = Σ_j q(i,j)·x[j] を分岐なしで積み、対角と j==i 項を後から補正することで
+    //   内側ループを unit-stride + omp simd reduction でベクトル化する。
     double delta(const std::vector<uint8_t>& x, int i) const {
-        double g = q(i, i);
-        for (int j = 0; j < N; ++j) if (j != i && x[j]) g += 2.0 * q(i, j);
+        const double*  __restrict qi = &Q[(size_t)i * N];
+        const uint8_t* __restrict xp = x.data();
+        double S = 0.0;
+        #pragma omp simd reduction(+:S)
+        for (int j = 0; j < N; ++j) S += qi[j] * (double)xp[j];
+        double g = qi[i] + 2.0 * (S - qi[i] * (double)xp[i]); // 対角を 1 回 + 非対角を 2 倍
         return x[i] ? -g : g;
     }
 };
@@ -125,6 +142,9 @@ int main(int argc, char** argv) {
         MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
         MPI_Bcast(best.data(), P.N, MPI_UNSIGNED_CHAR, out.r, MPI_COMM_WORLD);
         best_score = out.v;
+#endif
+        // 出力は MPI 有無と独立に行う (ローカル g++ ビルドでも出力形式を検証できるように)。
+        // SYNC ごとのチェックポイント書き出し → 時間切れでも直近ベストが必ず残る。
         if (rank == 0) {
             // CUSTOMIZE: 課題の出力形式に合わせて変更する
             FILE* fp = fopen("result.txt", "w");
@@ -136,7 +156,6 @@ int main(int argc, char** argv) {
                 fclose(fp);
             }
         }
-#endif
         t_sync = wtime() + SYNC;
     }
 

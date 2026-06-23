@@ -15,6 +15,15 @@
 //   export OMP_NUM_THREADS=12 OMP_PROC_BIND=close OMP_PLACES=cores
 //   mpiexec -n 4 ./build/fugaku/skeleton
 // =====================================================================
+// ─────────────────────────────────────────────────────────────────────
+// 🎯 当日の手順 (このファイル = N体/線形代数/ハイブリッド/その他)
+//   ① 下の「ここに課題本体を書く」ブロックを実装
+//      入力を読むなら utilities.hpp の fastio::init/ri/rll を使う
+//   ② make skeleton && ./build/skeleton            # ローカル5秒確認
+//   ③ tools/fugaku-run.sh skeleton <BUDGET_SEC>    # 富岳へ投入
+//   ⚠️ BUDGET_SEC は当日の実行時間制限を確認して上書き (README既定1750は仮の値)
+//   ⚠️ 入力が 8MB 超になるなら utilities.hpp の IBUF_SIZE を増やす (既定64MB)
+// ─────────────────────────────────────────────────────────────────────
 #include "common.hpp"
 #include <cstdio>
 #include <vector>

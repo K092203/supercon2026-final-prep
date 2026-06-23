@@ -44,7 +44,9 @@ struct Rng {
 #ifdef __SIZEOF_INT128__
         return (uint32_t)(((__uint128_t)next() * n) >> 64);
 #else
-        return (uint32_t)((double)next() * n * (1.0 / 18446744073709551616.0));
+        // double 経路は next() 最大値が 2^64 に丸められ n を返しうる → クランプで OOB を防ぐ
+        uint32_t v = (uint32_t)((double)next() * n * (1.0 / 18446744073709551616.0));
+        return v < n ? v : n - 1;
 #endif
     }
 };

@@ -15,14 +15,20 @@ JOB_SCRIPT=$(cat << ENDJOB
 #!/bin/bash
 #PJM -L rscgrp=${FUGAKU_RSCGRP}
 #PJM -L node=${FUGAKU_NODE_COUNT}
+#PJM --mpi "max-proc-per-node=${FUGAKU_MPI_RANKS}"
 #PJM -L elapse=${FUGAKU_ELAPSE}
 #PJM -g ${FUGAKU_GROUP}
 #PJM -j
 #PJM -S
 
+# 1 ランク = 1 CMG (12 コア) に固定。これがないと 4 ランクが CMG をまたいで配置され、
+# first-touch で確保した CMG ローカル HBM への局所性が崩れて帯域が出ない。
 export OMP_NUM_THREADS=${FUGAKU_OMP_THREADS}
 export OMP_PROC_BIND=close
 export OMP_PLACES=cores
+# ラージページ (TLB ミス削減: 大配列で効く)。実行環境で対応状況を初日に確認すること:
+#   export XOS_MMM_L_PAGING_POLICY=demand:demand:demand
+#   export XOS_MMM_L_HPAGE_TYPE=hugetlbfs
 
 RESULTS="${FUGAKU_REMOTE_DIR}/results/\${PJM_JOBID}"
 mkdir -p "\${RESULTS}"

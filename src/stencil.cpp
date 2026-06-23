@@ -16,6 +16,16 @@
 //   * Irecv/Isend でハロ交換を投げっぱなし → 内部セル更新 → Waitall で完了
 //     (現実装では Waitall を先に呼んでいるため、最適化時はここを分割すること)
 // =====================================================================
+// ─────────────────────────────────────────────────────────────────────
+// 🎯 当日の手順 (このファイル = ステンシル/反応拡散/CA/拡散・波動)
+//   ① 課題パラメータ H/W/STEPS/D/dt を設定 (下の「課題パラメータ」ブロック)
+//   ② update_row ラムダの更新式 (lap/react) を課題のカーネルに書き換え
+//   ③ 初期条件 (種まき) を課題に合わせる
+//   ④ make stencil && ./build/stencil → tools/fugaku-run.sh stencil <BUDGET_SEC>
+//   ⚠️ BUDGET_SEC は当日の実行時間制限を確認して上書き (既定1750は仮の値)
+//   ⚠️ react は現在 ×0.0f で無効化中。使う課題なら係数を戻す
+//   ⚠️ first-touch 並列初期化と stride パディングは消さない (HBM 帯域が半減する)
+// ─────────────────────────────────────────────────────────────────────
 #include "common.hpp"
 #include <cstdio>
 #include <cstdlib>
@@ -50,7 +60,11 @@ int main(int argc, char** argv) {
     // 行を各ランクに分配 (余りは先頭ランクへ)
     int base = H / nranks, rem = H % nranks;
     int lh = base + (rank < rem ? 1 : 0); // このランクの内部行数
-    size_t stride = (size_t)W;
+    // リーディング次元のパディング: W が 2 のべき(例 8192)だと行間が同じキャッシュセットに
+    // 写像され n[j]/c[j]/s[j] が衝突して L1/L2 ミスが激増する。8 要素ずらして回避する。
+    // (ハロ交換は各行先頭の実 W 要素のみを送るためパディングは透過)
+    const int PAD = 8;
+    size_t stride = (size_t)W + PAD;
     size_t rows = (size_t)lh + 2;         // 上下ゴースト各 1 行
 
     // first-touch 初期化 (各スレッドが自分の担当行に最初に触れる → CMG ローカル確保)
@@ -68,33 +82,43 @@ int main(int argc, char** argv) {
     double t0 = wtime();
     const double deadline = t0 + BUDGET_SEC;
 
+    // 1 行更新カーネル (5点ラプラシアン + 反応項。内側 j ループが unit-stride で SVE 化される)。
+    // a/b は std::swap でポインタが入れ替わるため毎回キャプチャ参照経由で読む。
+    auto update_row = [&](int i) {
+        const float* __restrict c = &a[(size_t)i * stride];
+        const float* __restrict n = &a[(size_t)(i - 1) * stride];
+        const float* __restrict s = &a[(size_t)(i + 1) * stride];
+        float* __restrict o = &b[(size_t)i * stride];
+        #pragma omp simd
+        for (int j = 1; j < W - 1; ++j) {
+            float lap = n[j] + s[j] + c[j-1] + c[j+1] - 4.0f * c[j];
+            float react = c[j] * (1.0f - c[j]); // 例: ロジスティック反応 (課題で書き換え)
+            o[j] = c[j] + dt * (D * lap + 0.0f * react);
+        }
+    };
+
     int final_step = 0;
     for (int step = 0; step < STEPS; ++step) {
         final_step = step + 1;
-        // ---- ハロ交換 (Irecv/Isend → Waitall) ----
-        // 最適化メモ: Waitall を内部セル更新後に移動すると通信/計算オーバーラップが可能
+        // ---- ハロ交換を非ブロッキングで投げる ----
 #ifdef USE_MPI
         MPI_Request req[4]; int nr = 0;
         MPI_Irecv(&a[0 * stride],          W, MPI_FLOAT, up,   0, MPI_COMM_WORLD, &req[nr++]);
         MPI_Irecv(&a[(rows - 1) * stride], W, MPI_FLOAT, down, 1, MPI_COMM_WORLD, &req[nr++]);
         MPI_Isend(&a[1 * stride],          W, MPI_FLOAT, up,   1, MPI_COMM_WORLD, &req[nr++]);
         MPI_Isend(&a[(size_t)lh * stride], W, MPI_FLOAT, down, 0, MPI_COMM_WORLD, &req[nr++]);
+#endif
+        // ---- 通信/計算オーバーラップ: ゴーストに依存しない内部行 (2..lh-1) を先に更新 ----
+        #pragma omp parallel for schedule(static)
+        for (int i = 2; i <= lh - 1; ++i) update_row(i);
+
+        // ---- ゴースト到着を待ってから境界行 (1 と lh) を更新 ----
+#ifdef USE_MPI
         MPI_Waitall(nr, req, MPI_STATUSES_IGNORE);
 #endif
-        // ---- 更新 (5点ラプラシアン + 反応項。内側 j ループが SVE 化される) ----
-        #pragma omp parallel for schedule(static)
-        for (int i = 1; i <= lh; ++i) {
-            const float* __restrict c = &a[(size_t)i * stride];
-            const float* __restrict n = &a[(size_t)(i - 1) * stride];
-            const float* __restrict s = &a[(size_t)(i + 1) * stride];
-            float* __restrict o = &b[(size_t)i * stride];
-            #pragma omp simd
-            for (int j = 1; j < W - 1; ++j) {
-                float lap = n[j] + s[j] + c[j-1] + c[j+1] - 4.0f * c[j];
-                float react = c[j] * (1.0f - c[j]); // 例: ロジスティック反応 (課題で書き換え)
-                o[j] = c[j] + dt * (D * lap + 0.0f * react);
-            }
-        }
+        update_row(1);
+        if (lh >= 2) update_row(lh);
+
         std::swap(a, b);
         // deadline チェック: STEPS 完了前に時間切れになっても出力を保証する
         if (step % 10 == 0 && wtime() > deadline) {
