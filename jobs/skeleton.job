@@ -1,0 +1,26 @@
+#!/bin/bash
+# pjsub 参照テンプレート: skeleton (時間計測 + MPI+OMP モンテカルロ)
+# 通常は tools/fugaku-submit.sh が動的生成するため直接使用しない。
+# 手動投入する場合:
+#   source tools/fugaku-config.env
+#   (各 __PLACEHOLDER__ を sed で置換してから pjsub)
+#
+#PJM -L rscgrp=__RSCGRP__
+#PJM -L node=1
+#PJM -L elapse=00:30:00
+#PJM -g __GROUP__
+#PJM -j
+#PJM -S
+
+export OMP_NUM_THREADS=12
+export OMP_PROC_BIND=close
+export OMP_PLACES=cores
+
+WORK="__REMOTE_DIR__"
+RESULTS="$WORK/results/${PJM_JOBID}"
+mkdir -p "$RESULTS"
+
+date -u +%Y-%m-%dT%H:%M:%SZ > "$RESULTS/meta.txt"
+mpiexec -n 4 "$WORK/build/fugaku/skeleton" > "$RESULTS/stdout.txt" 2> "$RESULTS/stderr.txt"
+echo $? > "$RESULTS/exit_code.txt"
+date -u +%Y-%m-%dT%H:%M:%SZ >> "$RESULTS/meta.txt"

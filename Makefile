@@ -15,7 +15,7 @@ FLAGS_LOCAL  = -std=c++17 -O2 -fopenmp -Wall -Wextra -Isrc $(BUDGET_OVERRIDE)
 CXX_FUGAKU   = mpiFCC
 FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512 -DUSE_MPI -Isrc $(BUDGET_OVERRIDE)
 
-.PHONY: all fugaku \
+.PHONY: all fugaku fugaku-run \
         skeleton stencil search \
         test-skeleton test-stencil test-search \
         fast naive run test stress bench clean
@@ -72,6 +72,11 @@ stress: fast naive
 
 bench: fast
 	python3 tools/benchmark.py
+
+# ---------- 富岳 ワンショット実行 (要: tools/fugaku-config.env) ----------
+# 使い方: make fugaku-run TARGET=skeleton BUDGET_SEC=1750
+fugaku-run:
+	tools/fugaku-run.sh $(or $(TARGET),skeleton) $(or $(BUDGET_SEC),1750)
 
 # ---------- clean ----------
 clean:

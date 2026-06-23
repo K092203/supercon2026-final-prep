@@ -1,0 +1,19 @@
+# ~/.ssh/config に追記するテンプレート
+# ControlMaster を使うと OTP が必要な場合でも初回以降は自動化できる
+#
+# 使い方:
+#   cat docs/fugaku-ssh-template.txt >> ~/.ssh/config
+#   chmod 600 ~/.ssh/config
+#   ssh-keygen -t ed25519 -f ~/.ssh/fugaku_ed25519   # まだ鍵がない場合
+#   # 富岳の authorized_keys に公開鍵を登録する (富岳ポータルで)
+
+Host fugaku
+    HostName login.fugaku.r-ccs.riken.jp
+    User your_account
+    IdentityFile ~/.ssh/fugaku_ed25519
+    ServerAliveInterval 60
+    ServerAliveCountMax 10
+    # ControlMaster: 1本目の接続を使い回す (OTP 対策)
+    ControlMaster auto
+    ControlPath ~/.ssh/cm-%r@%h:%p
+    ControlPersist 4h
