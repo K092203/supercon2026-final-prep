@@ -18,6 +18,7 @@ FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512 -DUSE_MPI
 .PHONY: all fugaku fugaku-run \
         skeleton stencil search \
         test-skeleton test-stencil test-search \
+        contest contest-fugaku test-contest \
         fast naive run test stress bench clean
 
 # ---------- デフォルト: ローカル 3 バイナリ ----------
@@ -34,6 +35,20 @@ stencil:
 search:
 	mkdir -p build
 	$(CXX_LOCAL) $(FLAGS_LOCAL) src/search.cpp -o build/search
+
+# ---------- 本選当日用: 新規ファイルを書いたときのビルド先 ----------
+# 使い方: src/contest.cpp を作成してから make contest
+# utilities.hpp (fastio/Budget/Rng) は自由に #include できる
+contest:
+	mkdir -p build
+	$(CXX_LOCAL) $(FLAGS_LOCAL) src/contest.cpp -o build/contest
+
+contest-fugaku:
+	mkdir -p build/fugaku
+	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/contest.cpp -o build/fugaku/contest
+
+test-contest: contest
+	./build/contest < tests/sample_01.in
 
 # ---------- 富岳提出ビルド ----------
 fugaku:
