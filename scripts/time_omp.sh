@@ -1,24 +1,26 @@
 #!/usr/bin/env bash
 # time_omp.sh — OMP_NUM_THREADS 別ベンチマーク
-# 使い方: scripts/time_omp.sh [入力ファイル] [制限秒数] [スレッド数リスト...]
-#   例: scripts/time_omp.sh tests/sample_01.in 5 1 2 4 8 12 24 48
-#   省略時: 1 2 4 8 12 を計測
+# 使い方: scripts/time_omp.sh [target] [入力ファイル] [制限秒数] [スレッド数リスト...]
+#   例: scripts/time_omp.sh contest tests/sample_01.in 5 1 2 4 8 12 24 48
+#   省略時: target=contest / threads= 1 2 4 8 12 (src/main.cpp は廃止)
 set -euo pipefail
 
-INPUT="${1:-tests/sample_01.in}"
-BUDGET="${2:-5}"
-shift 2 2>/dev/null || true
+TARGET="${1:-contest}"
+INPUT="${2:-tests/sample_01.in}"
+BUDGET="${3:-5}"
+shift 3 2>/dev/null || true
 THREADS="${*:-1 2 4 8 12}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+[ -f "src/$TARGET.cpp" ] || { echo "ERROR: src/$TARGET.cpp が無い (target=$TARGET)"; exit 1; }
 
 mkdir -p build
 
-echo "[time_omp] Building src/main.cpp (BUDGET_SEC=$BUDGET, -O2) ..."
+echo "[time_omp] Building src/$TARGET.cpp (BUDGET_SEC=$BUDGET, -O2) ..."
 g++ -std=c++17 -O2 -fopenmp -Isrc \
     -DBUDGET_SEC="$BUDGET" \
-    src/main.cpp -o build/contest_bench
+    "src/$TARGET.cpp" -o build/contest_bench
 
 echo ""
 printf "%-12s  %-12s  %-20s\n" "OMP_THREADS" "Elapsed(s)" "Stderr"
