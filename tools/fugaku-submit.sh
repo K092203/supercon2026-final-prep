@@ -10,7 +10,11 @@ source "$SCRIPT_DIR/fugaku-config.env"
 TARGET="${1:-skeleton}"
 BUDGET_SEC="${2:-${BUDGET_SEC:-1750}}"
 INPUT="${3:-}"
-<<<<<<< Updated upstream
+case "$TARGET" in stencil-blocked) TARGET=stencil_blocked ;; esac
+case "$TARGET" in
+  skeleton|stencil|stencil_blocked|search|contest) ;;
+  *) echo "ERROR: unknown target: $TARGET (skeleton|stencil|stencil_blocked|search|contest)" >&2; exit 2 ;;
+esac
 FUGAKU_ELAPSE_MARGIN_SEC="${FUGAKU_ELAPSE_MARGIN_SEC:-30}"
 
 elapse_to_sec() {
@@ -61,13 +65,6 @@ check_budget_elapse() {
 }
 
 check_budget_elapse "$BUDGET_SEC" "${FUGAKU_ELAPSE:-}" "$FUGAKU_ELAPSE_MARGIN_SEC"
-=======
-case "$TARGET" in stencil-blocked) TARGET=stencil_blocked ;; esac
-case "$TARGET" in
-  skeleton|stencil|stencil_blocked|search|contest) ;;
-  *) echo "ERROR: unknown target: $TARGET (skeleton|stencil|stencil_blocked|search|contest)" >&2; exit 2 ;;
-esac
->>>>>>> Stashed changes
 
 # 実入力ファイルを remote の固定パスへ送る (JOBID は submit 後にしか分からないため
 # inputs/current.dat に置き、ジョブ側で stdin にリダイレクト + 結果へ複製する)。
