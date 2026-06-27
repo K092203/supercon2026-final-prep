@@ -85,6 +85,7 @@ int main(int argc, char** argv) {
     const double T0      = args.getf("sa-temp", 1.0);    // 初期温度
     const double cooling = args.getf("cooling", 0.999);  // 冷却率
     const int    iters   = (int)args.geti("iters", 20000); // SYNC 内の反復数
+    const int    time_check_interval = 256;              // delta が重い時の締切超過を抑える
     const double SYNC    = args.getf("sync", 0.5);       // この秒ごとに全体ベストを集約
 
     // ---- 問題生成 (本選では入力読込に置換) ---
@@ -126,6 +127,7 @@ int main(int argc, char** argv) {
 
             while (wtime() < next_sync) {
                 for (int it = 0; it < iters; ++it) {
+                    if ((it & (time_check_interval - 1)) == 0 && wtime() >= next_sync) break;
                     int i = r.below(P.N);
                     double d = P.delta(x, i);
                     if (d > 0 || r.uniform() < std::exp(d / T)) {
