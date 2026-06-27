@@ -10,6 +10,56 @@ source "$SCRIPT_DIR/fugaku-config.env"
 TARGET="${1:-skeleton}"
 BUDGET_SEC="${2:-${BUDGET_SEC:-1750}}"
 INPUT="${3:-}"
+FUGAKU_ELAPSE_MARGIN_SEC="${FUGAKU_ELAPSE_MARGIN_SEC:-30}"
+
+elapse_to_sec() {
+    local s="$1"
+    if [[ "$s" =~ ^([0-9]+):([0-5][0-9]):([0-5][0-9])$ ]]; then
+        echo $((10#${BASH_REMATCH[1]} * 3600 + 10#${BASH_REMATCH[2]} * 60 + 10#${BASH_REMATCH[3]}))
+        return 0
+    fi
+    if [[ "$s" =~ ^([0-9]+):([0-5][0-9])$ ]]; then
+        echo $((10#${BASH_REMATCH[1]} * 60 + 10#${BASH_REMATCH[2]}))
+        return 0
+    fi
+    return 1
+}
+
+check_budget_elapse() {
+    local budget="$1"
+    local elapse="${2:-}"
+    local margin="$3"
+    local elapse_sec required
+
+    if [ -z "$budget" ]; then
+        echo "WARNING: BUDGET_SEC が未設定のため、PJM elapse との整合チェックをスキップします。" >&2
+        return 0
+    fi
+    if ! [[ "$budget" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+        echo "WARNING: BUDGET_SEC を数値化できないため、PJM elapse との整合チェックをスキップします: $budget" >&2
+        return 0
+    fi
+    if [ -z "$elapse" ]; then
+        echo "WARNING: FUGAKU_ELAPSE が未設定のため、PJM elapse との整合チェックをスキップします。" >&2
+        return 0
+    fi
+    if ! elapse_sec=$(elapse_to_sec "$elapse"); then
+        echo "WARNING: FUGAKU_ELAPSE を秒換算できないため、PJM elapse との整合チェックをスキップします: $elapse" >&2
+        return 0
+    fi
+    if ! [[ "$margin" =~ ^[0-9]+$ ]]; then
+        echo "WARNING: FUGAKU_ELAPSE_MARGIN_SEC を数値化できないため、PJM elapse との整合チェックをスキップします: $margin" >&2
+        return 0
+    fi
+
+    required=$(awk -v b="$budget" -v m="$margin" 'BEGIN { s = b + m; printf "%d", int(s) + (s > int(s)) }')
+    if [ "$required" -gt "$elapse_sec" ]; then
+        echo "ERROR: 実行予算が PJM elapse を超えています。BUDGET_SEC=${budget}s + 余裕マージン=${margin}s = ${required}s, FUGAKU_ELAPSE=${elapse} (${elapse_sec}s)。BUDGET_SEC を下げるか FUGAKU_ELAPSE を延ばしてください。" >&2
+        exit 1
+    fi
+}
+
+check_budget_elapse "$BUDGET_SEC" "${FUGAKU_ELAPSE:-}" "$FUGAKU_ELAPSE_MARGIN_SEC"
 
 # 実入力ファイルを remote の固定パスへ送る (JOBID は submit 後にしか分からないため
 # inputs/current.dat に置き、ジョブ側で stdin にリダイレクト + 結果へ複製する)。
