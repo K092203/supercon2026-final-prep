@@ -74,8 +74,18 @@ struct Args {
     bool has(const std::string& k) const {
         return kv.count(k) || flagset.count(k) || std::getenv(env_key(k).c_str()) != nullptr;
     }
-    double      getf(const std::string& k, double def)             const { const char* v = raw(k); return v ? std::atof(v) : def; }
-    long long   geti(const std::string& k, long long def)          const { const char* v = raw(k); return v ? std::atoll(v) : def; }
+    // 数値は strtod/strtoll + endptr で「全体が数値か」を検証し、不正(--budget abc 等)は既定へ。
+    //   atof/atoll は不正値を黙って 0 にし、budget=0(即時 deadline)等の事故を生むため使わない。
+    double getf(const std::string& k, double def) const {
+        const char* v = raw(k); if (!v) return def;
+        char* end = nullptr; double r = std::strtod(v, &end);
+        return (end != v && *end == '\0') ? r : def;
+    }
+    long long geti(const std::string& k, long long def) const {
+        const char* v = raw(k); if (!v) return def;
+        char* end = nullptr; long long r = std::strtoll(v, &end, 10);
+        return (end != v && *end == '\0') ? r : def;
+    }
     std::string gets(const std::string& k, const std::string& def) const { const char* v = raw(k); return v ? std::string(v) : def; }
 };
 
