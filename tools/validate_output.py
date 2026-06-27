@@ -15,10 +15,20 @@
 #       score(inst, ans)        … スコアを返す (不要なら None)
 #      既定は「枠」と最低限の汎用チェック(空出力・debug混入)だけ。
 # =====================================================================
+import argparse
 import sys
 
-# debug 出力の混入検知に使う代表トークン (課題に応じて調整)
-BAD_TOKENS = ("DEBUG", "debug", "TODO", "nan", "inf", "[search]", "[stencil]", "#TUNE")
+# ⚠️ 当日 validate()/score() を problem 固有に実装したら True にする。
+#    False の間は「雛形のまま」= 形式チェックしかしていないことを警告する(誤認防止)。
+CUSTOMIZED = False
+
+# --- デバッグ/不正トークン検知 (部分一致は誤検知するためトークン単位で判定) ---
+# 単独トークンとして現れたら不正とみなすデバッグ語 ("debugger" 等は誤検知しない)
+BAD_EXACT = {"DEBUG", "debug", "TODO"}
+# 非有限の数値 (大文字小文字・符号ゆれを吸収。"infinite"/"nanny" は誤検知しない)
+NONFINITE = {"nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"}
+# デバッグ行の先頭マーカー (この接頭辞で始まるトークンは混入とみなす)
+BAD_PREFIXES = ("#TUNE", "[search]", "[stencil]", "[result]", "[env]")
 
 
 def fail(msg):
@@ -44,9 +54,13 @@ def parse_output(path):
     tokens = text.split()
     if not tokens:
         fail("出力が空")
-    for bad in BAD_TOKENS:
-        if bad in text:
-            fail(f"出力に不正トークン混入: {bad!r}")
+    for tok in tokens:
+        if tok in BAD_EXACT:
+            fail(f"出力にデバッグトークン混入: {tok!r}")
+        if tok.lower() in NONFINITE:
+            fail(f"出力に非有限数値: {tok!r}")
+        if tok.startswith(BAD_PREFIXES):
+            fail(f"出力にデバッグ行混入: {tok!r}")
     return tokens
 
 
@@ -70,15 +84,25 @@ def score(inst, ans):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("usage: validate_output.py <input_file> <output_file>", file=sys.stderr)
-        sys.exit(2)
-    in_path, out_path = sys.argv[1], sys.argv[2]
+    ap = argparse.ArgumentParser(description="出力の形式/制約検査 + スコア計算 (当日 problem 固有に実装)")
+    ap.add_argument("input_file")
+    ap.add_argument("output_file")
+    ap.add_argument("--strict", action="store_true",
+                    help="雛形のまま(CUSTOMIZED=False)なら exit 3 で失敗させる(検証ループで誤認防止)")
+    a = ap.parse_args()
 
-    inst = read_input(in_path)
-    ans = parse_output(out_path)      # 汎用形式チェック込み
-    validate(inst, ans)               # 制約チェック (NG は exit 1)
+    inst = read_input(a.input_file)
+    ans = parse_output(a.output_file)   # 汎用形式チェック込み
+    validate(inst, ans)                 # 制約チェック (NG は exit 1)
     s = score(inst, ans)
+
+    # 雛形のまま使うと「形式 OK = valid」と誤認しやすいので明示的に警告する。
+    if not CUSTOMIZED:
+        print("WARNING: validate_output.py は雛形のままです(validate/score 未実装=形式チェックのみ)。"
+              "当日 4関数を実装し CUSTOMIZED=True にしてください。", file=sys.stderr)
+        if a.strict:
+            print("INVALID: --strict 指定だが validator が未カスタマイズ", file=sys.stderr)
+            sys.exit(3)
 
     if s is not None:
         print(f"score={s}")
