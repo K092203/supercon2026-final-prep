@@ -33,7 +33,7 @@
 // 超高速 I/O (fread ベース)
 //
 // フロー:
-//   stdin ──fread──▶ ibuf[8MB] ──ri()/rll()──▶ [solver] ──wi()──▶ obuf[8MB] ──fwrite──▶ stdout
+//   stdin ──fread──▶ ibuf[64MB] ──ri()/rll()──▶ [solver] ──wi()──▶ obuf[64MB] ──fwrite──▶ stdout
 //
 // なぜ fread か:
 //   cin/scanf は内部で毎回システムコールを発行する。fread は stdin 全体を
@@ -43,7 +43,7 @@
 // 注意:
 //   - init()  は main() 先頭で一度だけ呼ぶ (全 stdin を読み込む)
 //   - flush() は main() 末尾で一度だけ呼ぶ (obuf を stdout へ書く)
-//   - 入力が 8MB を超える場合は IBUF_SIZE を増やすこと
+//   - 入力が 64MB を超える場合は IBUF_SIZE を増やすこと
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 namespace fastio {
     static constexpr int IBUF_SIZE = 1 << 26; // 64 MB (本選の大規模入力に備える。足りなければ増やす)
