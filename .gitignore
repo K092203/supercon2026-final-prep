@@ -8,6 +8,9 @@ results/tune/*
 # state/ は incumbent.json / gp_state.json(実行時生成・命綱)。マーカーのみ追跡
 state/*
 !state/.gitkeep
+# submissions/ は提出候補スナップショット(save_candidate.sh が生成・ローカル成果物)。マーカーのみ追跡
+submissions/*
+!submissions/.gitkeep
 tools/fugaku-config.env
 # Python キャッシュ (day1-smoke の py_compile 等で生成)
 __pycache__/
