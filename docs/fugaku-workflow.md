@@ -96,7 +96,7 @@ ssh fugaku "pjdel 12345"
 results/
 └── latest/          ← 最新ジョブへのシンボリックリンク
     ├── meta.json    ← 全部入りヘッダ (config+source+build+resource+outcome。最初に読む)
-    ├── build.log    ← mpiFCC ビルド出力 (富士通clang エラー/警告)
+    ├── build.log    ← mpiFCCpx ビルド出力 (富士通clang エラー/警告)
     ├── stdout.txt   ← プログラム出力 ([stencil] sum=... 等)
     ├── stderr.txt   ← 実行時エラー・MPI エラー
     ├── resource.txt ← /usr/bin/time -v (最大RSS / 実wall / CPU%)
@@ -140,7 +140,8 @@ final-prep/
 ├── jobs/
 │   ├── skeleton.job   # pjsub 参照テンプレート (手動投入用)
 │   ├── stencil.job
-│   └── search.job
+│   ├── search.job
+│   └── tune.pjm.template  # バッチ掃引ジョブ (fugaku-tune.sh が生成)
 ├── results/           # .gitignore 済み
 │   ├── .gitkeep
 │   ├── latest -> 123456/   (シンボリックリンク)
@@ -150,7 +151,7 @@ final-prep/
 │       ├── stderr.txt
 │       └── exit_code.txt
 ├── tools/
-│   ├── fugaku-config.env.template  # .gitignore 済み
+│   ├── fugaku-config.env.template  # 追跡対象 (生成物 fugaku-config.env が .gitignore)
 │   ├── fugaku-sync.sh
 │   ├── fugaku-submit.sh
 │   ├── fugaku-wait.sh

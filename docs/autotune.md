@@ -35,7 +35,7 @@ spaces/<tmpl>.tsv ──gen_configs.py──▶ configs.tsv
 | [tools/gen_configs.py](../tools/gen_configs.py) | space.tsv → configs.tsv（LHS/grid・整数丸め・重複除去・カテゴリ列挙） |
 | [tools/update_incumbent.py](../tools/update_incumbent.py) | results.csv から正解かつ最良を選び、**厳密に改善した時だけ** incumbent.json を置換 |
 | [tools/tune-local.sh](../tools/tune-local.sh) | ローカル通しリハ（mpirun / build/mpi） |
-| [tools/fugaku-tune.sh](../tools/fugaku-tune.sh) | 富岳バッチ版（sync→configs送付→tune.pjm投入→wait→fetch→incumbent） |
+| [tools/fugaku-tune.sh](../tools/fugaku-tune.sh) | 富岳バッチ版（sync→configs/tune-sweep送付→tune.pjm投入→wait→round rsync回収→incumbent） |
 | [jobs/tune.pjm.template](../jobs/tune.pjm.template) | PJM ディレクティブ + tune-sweep.sh 呼び出し |
 | `autotune/spaces/*.tsv` | 探索空間定義（当日埋める） |
 
@@ -102,6 +102,7 @@ id,elapsed,correct,score,exit_code,rep_done,notes
 - 目的関数: **`min-elapsed`**（速度律速＝ステンシル等）/ **`max-score`**（予算固定の anytime＝SA・モンテカルロ）/ `score-per-sec`。
 - `incumbent.json` は「現時点ベストの正解構成」。**いつジョブが落ちても提出できる命綱**。
   打切り round の後も据え置きで生き残る（検証済み）。
+- 失敗構成の stderr は `results/tune/<round>/errors.log` に id 付きで集約される（crash/timeout の原因確認用）。
 
 ---
 
@@ -120,8 +121,8 @@ id,elapsed,correct,score,exit_code,rep_done,notes
 
 ## 7. ローカルリハの注意（検証で判明した実挙動）
 
-- **mpirun の stdin 食い**: `tune-sweep.sh` は launcher を `</dev/null` で起動する（無いと configs を食って
-  2 構成目以降が読めない）。修正済み。
+- **mpirun の stdin 食い**: `tune-sweep.sh` は launcher の stdin を入力ファイル（既定 `/dev/null`、stdin を読む課題は
+  第7引数 `input_file`）に固定する（無いと configs を食って 2 構成目以降が読めない）。修正済み。
 - **過剰サブスクライブ**: ローカルで `-n4 × omp12 = 48` スレッドは MPI ランタイムが稀に起動でストールする。
   → ローカルリハは **`--omp 2 --ranks 2`** で生成する。富岳は `4×12=48` ぴったりなので起きない。
 - ハングしても `tune-sweep.sh` は per-config `timeout` で打ち切りペナルティを記録して**継続**する（全滅しない）。
