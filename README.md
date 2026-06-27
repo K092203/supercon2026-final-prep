@@ -109,6 +109,7 @@ tools/fugaku-sync.sh 5
 ```bash
 # ワンショット: 転送 → ビルド → ジョブ投入 → 待機 → 結果回収
 tools/fugaku-run.sh stencil 1750
+# make 経由 (実入力を渡す場合): make fugaku-run TARGET=contest BUDGET_SEC=1750 INPUT=tests/sample_01.in
 
 # 結果を確認
 cat results/latest/stdout.txt
@@ -209,9 +210,9 @@ final-prep/
 │   ├── gen_configs.py      # 探索空間 → configs.tsv (LHS/grid・丸め・重複除去)
 │   ├── update_incumbent.py # results.csv → state/incumbent.json (改善時のみ)
 │   ├── codex-review.sh     # Codex セカンドオピニオン (read-only レビュー/検証)
-│   ├── stress.py           # Fast vs Naive 比較（課題実装後に使用）
+│   ├── stress.py           # Fast vs Naive 比較（課題実装後に使用。--timeout で打切り時間可変）
 │   ├── benchmark.py        # Fast の速度計測
-│   └── runner.sh           # ⚠️ 旧ローカルランナー (src/main.cpp 参照・現構成では未整合)
+│   └── runner.sh           # ローカルランナー (runner.sh [target] [input] [budget]・既定 contest)
 ├── jobs/                   # pjsub 参照テンプレート
 │   ├── skeleton.job / stencil.job / search.job   # 手動投入用
 │   └── tune.pjm.template   # バッチ掃引ジョブ (fugaku-tune.sh が生成)
@@ -220,7 +221,7 @@ final-prep/
 ├── cases/
 │   └── sample.in           # ダミー入力（課題に合わせて書き換え）
 ├── tests/                  # サンプル *.in/*.out + judge.sh (一括正誤判定)
-├── scripts/                # ⚠️ profile.sh / time_omp.sh (src/main.cpp 参照・旧ツール)
+├── scripts/                # profile.sh / time_omp.sh (どちらも [target] 引数化・既定 contest)
 ├── docs/
 │   ├── fugaku-workflow.md  # 富岳インフラ詳細設計
 │   ├── fugaku-ssh-template.txt
