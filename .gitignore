@@ -1,3 +1,11 @@
 build/
-results/
+# results/ は実行結果(.gitignore)。ただし dir マーカーと tune/ 構造は残す
+results/*
+!results/.gitkeep
+!results/tune/
+results/tune/*
+!results/tune/.gitkeep
+# state/ は incumbent.json / gp_state.json(実行時生成・命綱)。マーカーのみ追跡
+state/*
+!state/.gitkeep
 tools/fugaku-config.env

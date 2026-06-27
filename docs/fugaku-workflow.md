@@ -74,27 +74,34 @@ ssh fugaku "pjdel 12345"
 
 ## AI 解析のエントリポイント
 
+各ジョブの `results/<jobid>/` は**そのジョブの完全な検死報告書**(これを読めば富岳の状態が分かる):
+
 ```
 results/
 └── latest/          ← 最新ジョブへのシンボリックリンク
-    ├── meta.json    ← ジョブ設定・コア数・exit_code (Claude Code が最初に読む)
+    ├── meta.json    ← 全部入りヘッダ (config+source+build+resource+outcome。最初に読む)
+    ├── build.log    ← mpiFCC ビルド出力 (富士通clang エラー/警告)
     ├── stdout.txt   ← プログラム出力 ([stencil] sum=... 等)
-    └── stderr.txt   ← コンパイル警告・MPI エラー等
+    ├── stderr.txt   ← 実行時エラー・MPI エラー
+    ├── resource.txt ← /usr/bin/time -v (最大RSS / 実wall / CPU%)
+    ├── status.txt   ← completed exit=.. wall_sec=.. (無ければ PJM kill で未完)
+    └── exit_code.txt
 ```
 
-`meta.json` のフォーマット:
+`meta.json` のフォーマット (新スキーマ):
 ```json
 {
-  "jobid": "123456",
-  "target": "skeleton",
-  "budget_sec": 1750,
-  "nodes": 1,
-  "mpi_ranks": 4,
-  "omp_threads": 12,
-  "total_cores": 48,
-  "exit_code": 0
+  "jobid": "123456", "target": "skeleton", "budget_sec": 1750,
+  "nodes": 1, "mpi_ranks": 4, "omp_threads": 12, "total_cores": 48,
+  "rscgrp": "small", "elapse_limit": "00:30:00",
+  "git_commit": "2fd51ea", "git_dirty": 0, "build_status": "ok",
+  "exit_code": 0, "wall_sec": 1748, "max_rss_kb": 1234567,
+  "outcome": "completed", "sched_status": "COMPLETED",
+  "fetched_at": "2026-08-17T12:34:56Z"
 }
 ```
+> `outcome`: completed / timeout / failed / killed-or-incomplete。`build_status`: ok / error。
+> ビルド失敗時はジョブが出ないため `results/last-build.log` に出力が残る。
 
 ## ControlMaster による OTP の扱い
 
@@ -132,8 +139,10 @@ final-prep/
 │   ├── fugaku-submit.sh
 │   ├── fugaku-wait.sh
 │   ├── fugaku-fetch.sh
-│   └── fugaku-run.sh   ← 普段はこれだけ使う
+│   ├── fugaku-run.sh   ← 単発デバッグはこれ
+│   └── fugaku-tune.sh  ← バッチ掃引 (1ジョブでN構成。詳細 docs/autotune.md)
 └── docs/
     ├── fugaku-ssh-template.txt
-    └── fugaku-workflow.md  (このファイル)
+    ├── fugaku-workflow.md  (このファイル)
+    └── autotune.md         # オートチューニング測定ハーネス運用ガイド
 ```

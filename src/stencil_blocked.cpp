@@ -21,6 +21,7 @@
 //         結果は plain と一致する (make test-blocked で sum 一致を自動確認)。
 // =====================================================================
 #include "common.hpp"
+#include "tune_args.hpp"
 #include <cstdio>
 #include <vector>
 #include <cmath>
@@ -139,7 +140,6 @@ static void advance_block(const std::vector<float>& a, std::vector<float>& b,
 }
 
 int main(int argc, char** argv) {
-    (void)argc; (void)argv;
     int rank = 0, nranks = 1;
 #ifdef USE_MPI
     int provided = 0, up = -1, down = -1;
@@ -149,6 +149,8 @@ int main(int argc, char** argv) {
     up   = (rank == 0)          ? MPI_PROC_NULL : rank - 1;
     down = (rank == nranks - 1) ? MPI_PROC_NULL : rank + 1;
 #endif
+    tune::Args args(argc, argv);
+    const double BUDGET = tune::budget(args, BUDGET_SEC); // --budget で実行時上書き (BT/RB/CB は -D=リビルド層)
     const int base = H / nranks, rem = H % nranks;
     const int lh = base + (rank < rem ? 1 : 0);
     const size_t stride = (size_t)W + PAD;
@@ -171,7 +173,7 @@ int main(int argc, char** argv) {
     }
 
     double t0 = wtime();
-    const double deadline = t0 + BUDGET_SEC;
+    const double deadline = t0 + BUDGET;
     int done = 0;
     for (int t = 0; t < STEPS; t += BT) {
         const int bt = std::min((int)BT, STEPS - t);
@@ -207,9 +209,11 @@ int main(int argc, char** argv) {
     MPI_Reduce(loc, tot, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 #endif
     double elapsed = wtime() - t0;
-    if (rank == 0)
+    if (rank == 0) {
         std::printf("[blocked] sum=%.6e sumsq=%.6e chk=%.6e  steps=%d/%d  BT=%d RB=%d CB=%d  %.3fs\n",
                     tot[0], tot[1], tot[2], done, STEPS, (int)BT, (int)RB, (int)CB, elapsed);
+        tune::report(tot[0], (done >= STEPS) ? 1 : 0, elapsed);
+    }
 #ifdef USE_MPI
     MPI_Finalize();
 #endif

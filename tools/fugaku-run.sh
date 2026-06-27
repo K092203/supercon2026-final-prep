@@ -2,7 +2,7 @@
 # WSL2↔富岳 開発ループ ワンショット実行
 # 使い方: tools/fugaku-run.sh <target> [budget_sec]
 #   target:     skeleton | stencil | search
-#   budget_sec: 時間予算 (秒)。デフォルト 1750 (本選 30分 - 10秒マージン)
+#   budget_sec: 時間予算 (秒)。デフォルト 1750 (本選 30分=1800 - 50秒マージン。値は当日確認)
 #
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 本戦初日セットアップ (初回のみ。以降は不要)
@@ -80,4 +80,8 @@ echo ""
 echo "--- stderr (末尾 5行) ---"
 tail -5  "$REPO_ROOT/results/$JOBID/stderr.txt" 2>/dev/null || echo "(stderr なし)"
 echo ""
-echo ">>> AI 解析: results/latest/ を読んでください"
+echo "--- 状態サマリ (build / 実行 / 資源) ---"
+grep -oE '"(outcome|build_status|wall_sec|max_rss_kb|git_commit|git_dirty)": [^,}]*' \
+  "$REPO_ROOT/results/$JOBID/meta.json" 2>/dev/null | tr -d '"' | sed 's/^/  /'
+echo ""
+echo ">>> AI 解析: results/latest/ を読む (meta.json / build.log / resource.txt / status.txt / stdout / stderr)"

@@ -109,6 +109,27 @@ tools/fugaku-run.sh stencil 1750
 
 ---
 
+## オートチューニング（1ジョブで複数構成を掃引）
+
+パラメータを振って速さを測る作業を自動化する測定ハーネス。詳細・3層モデル・Day1ランブックは [docs/autotune.md](docs/autotune.md)。
+
+```bash
+# 探索空間 → configs.tsv（LHS・整数丸め・重複除去・カテゴリ列挙）
+tools/gen_configs.py autotune/spaces/search.tsv --n 12 \
+    --target search --bin search --ranks 4 --omp 12 --rep 3 > configs.tsv
+# 富岳で N 構成を 1 ジョブ掃引 → state/incumbent.json 更新
+tools/fugaku-tune.sh configs.tsv <BUDGET_SEC> max-score
+# ローカル予行演習（実機前に全経路を検証。過剰サブスクライブ回避で omp は小さく）
+tools/gen_configs.py autotune/spaces/search.tsv --n 6 --ranks 2 --omp 2 --rep 1 > /tmp/c.tsv
+tools/tune-local.sh /tmp/c.tsv 0.5 max-score
+```
+
+> `state/incumbent.json` =「いつ落ちても提出できる現時点ベスト」。各テンプレは `src/tune_args.hpp` 経由で
+> `--sa-temp` 等を argv で受け、末尾に `#TUNE elapsed=.. score=.. correct=..` を stderr へ出す。
+> GP は載っていない（任意の付録。差込点は docs/autotune.md §9）。
+
+---
+
 ## 本選当日の手順
 
 ```bash
@@ -145,27 +166,38 @@ final-prep/
 │   ├── stencil_blocked.cpp # 温度ブロッキング版 (メモリ律速時の伸び代。plain と結果一致を検証済)
 │   ├── search.cpp          # 並列SA (xoshiro256** / MPI_MAXLOC+Bcast)
 │   ├── contest.cpp         # 当日雛形 (fastio I/O 配線の実証サンプル。当日 solve を差し替え)
-│   └── solver_naive.cpp    # 愚直解プレースホルダ (stress.py 用)
+│   ├── solver_naive.cpp    # 愚直解プレースホルダ (stress.py 用)
+│   └── tune_args.hpp       # チューニング共通規約 (argv/env を読む → #TUNE 行を出す)
 ├── tools/
 │   ├── fugaku-run.sh       # ワンショット実行 (sync→submit→wait→fetch)
 │   ├── fugaku-sync.sh      # rsync + ログインノードビルド
 │   ├── fugaku-submit.sh    # pjsub 投入
 │   ├── fugaku-wait.sh      # pjstat ポーリング
 │   ├── fugaku-fetch.sh     # 結果回収
+│   ├── fugaku-tune.sh      # バッチ掃引 (1ジョブでN構成。fugaku-run のバッチ版)
 │   ├── fugaku-config.env.template  # アカウント設定テンプレート
 │   ├── check-mpi.sh        # ローカル4ランクで MPI 経路を自動検証 (make test-mpi)
+│   ├── tune-sweep.sh       # 測定ループ (local/富岳 共用の心臓部)
+│   ├── tune-local.sh       # ローカル掃引リハ (mpirun。富岳前の予行演習)
+│   ├── gen_configs.py      # 探索空間 → configs.tsv (LHS/grid・丸め・重複除去)
+│   ├── update_incumbent.py # results.csv → state/incumbent.json (改善時のみ)
 │   ├── stress.py           # Fast vs Naive 比較（課題実装後に使用）
 │   └── benchmark.py        # Fast の速度計測
-├── jobs/                   # pjsub 参照テンプレート
+├── jobs/                   # pjsub 参照テンプレート (tune.pjm.template = バッチ掃引ジョブ)
+├── autotune/
+│   └── spaces/             # 探索空間定義 search.tsv / stencil.tsv (当日埋める)
 ├── cases/
 │   └── sample.in           # ダミー入力（課題に合わせて書き換え）
 ├── docs/
 │   ├── fugaku-workflow.md  # 富岳インフラ詳細設計
 │   ├── fugaku-ssh-template.txt
-│   ├── design-rebuild.md   # テンプレート設計ドキュメント
+│   ├── design-rebuild.md   # 設計思想: C++テンプレート (なぜ)
+│   ├── design-infra.md     # 設計思想: インフラ/ハーネス/全体 (なぜ。テンプレ以外)
 │   ├── problem_notes.md    # 当日プレイブック（初動手順 + テンプレ選択ツリー + 記入欄）
-│   └── experiments.md      # 最適化レシピ集（ROI順）+ 実験ログ表
-├── results/                # .gitignore済み（富岳結果が届く場所）
+│   ├── experiments.md      # 最適化レシピ集（ROI順）+ 実験ログ表
+│   └── autotune.md         # オートチューニング運用ガイド (操作/3層モデル/Day1/堅牢化記録)
+├── results/                # .gitignore済み（富岳結果。tune/ にバッチ掃引結果）
+├── state/                  # .gitignore済み（incumbent.json = 命綱。.gitkeep のみ追跡）
 ├── build/                  # .gitignore済み
 ├── Makefile
 └── CLAUDE.md

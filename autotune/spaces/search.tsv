@@ -1,0 +1,8 @@
+# search (並列SA) の探索空間 — 内側ノブ(リビルド不要・実行時)のみ
+#   <name> <type> <low> <high>     ; name は search.cpp が argv で受けるキー
+# ジオメトリ(ranks×omp)はここに入れない → ピン留め敏感なので別ジョブで少数点を測る。
+# 目的関数は max-score 推奨 (SA は予算を使い切るので elapsed はほぼ一定、変わるのは解の質)。
+sa-temp   float  0.2     3.0
+cooling   float  0.990   0.9995
+iters     int    5000    40000
+sync      float  0.2     1.0

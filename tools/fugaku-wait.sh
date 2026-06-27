@@ -3,7 +3,9 @@
 # 使い方: tools/fugaku-wait.sh <jobid>
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/fugaku-config.env"
+mkdir -p "$ROOT/results"
 
 JOBID="${1:-$(cat "$(cd "$SCRIPT_DIR/.." && pwd)/results/.last-jobid" 2>/dev/null || echo '')}"
 if [ -z "$JOBID" ]; then
@@ -21,10 +23,12 @@ while true; do
 
   case "$STATUS" in
     COMPLETED)
+      echo "COMPLETED" > "$ROOT/results/.last-status"
       echo "=== COMPLETED"
       exit 0
       ;;
     REJECTED|ERROR|CANCELLED)
+      echo "$STATUS" > "$ROOT/results/.last-status"
       echo "=== FAILED: STATUS=$STATUS"
       exit 1
       ;;
@@ -33,6 +37,7 @@ while true; do
       ;;
     *)
       # pjstat が空 (ジョブ履歴から消えた場合) → 完了とみなす
+      echo "GONE" > "$ROOT/results/.last-status"
       echo "=== STATUS 取得不可 (ジョブ完了済みの可能性)"
       exit 0
       ;;
