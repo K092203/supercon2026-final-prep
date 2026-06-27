@@ -21,6 +21,7 @@
 #include "common.hpp"   // -> cstdint / chrono / mpi.h / wtime() / Rng
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <cmath>
 #include <algorithm>
 #include <vector>
@@ -61,8 +62,10 @@ namespace fastio {
         while (ilen < IBUF_SIZE &&
                (got = fread(ibuf + ilen, 1, (size_t)(IBUF_SIZE - ilen), stdin)) > 0)
             ilen += (int)got;
-        if (ilen >= IBUF_SIZE)
-            fprintf(stderr, "[fastio] WARNING: input filled IBUF_SIZE(%d). 入力切り捨ての恐れ → IBUF_SIZE を増やせ\n", IBUF_SIZE);
+        if (ilen >= IBUF_SIZE && fgetc(stdin) != EOF) {
+            fprintf(stderr, "[fastio] ERROR: 入力が IBUF_SIZE(%d) を超えたため中止します。部分入力で続行すると WA になります。src/utilities.hpp の IBUF_SIZE を増やしてください。\n", IBUF_SIZE);
+            std::exit(1);
+        }
     }
     inline void flush() { fwrite(obuf, 1, (size_t)opos, stdout); opos = 0; }
 
