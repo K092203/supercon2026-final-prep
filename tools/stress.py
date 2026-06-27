@@ -12,7 +12,7 @@ def gen_case():
     a = [random.randint(0, 10) for _ in range(n)]
     return str(n) + "\n" + " ".join(map(str, a)) + "\n"
 
-def run(cmd, inp):
+def run(cmd, inp, timeout=2.0):
     # (returncode, output) を返す。timeout/クラッシュを「空出力一致で PASS」と誤判定しないため。
     try:
         res = subprocess.run(
@@ -20,7 +20,7 @@ def run(cmd, inp):
             input=inp.encode(),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=2
+            timeout=timeout
         )
     except subprocess.TimeoutExpired:
         return 124, "TIMEOUT"
@@ -34,13 +34,14 @@ def main():
     ap.add_argument("--naive", default="./build/naive")
     ap.add_argument("--cases", type=int, default=10000)
     ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("--timeout", type=float, default=2.0)
     a = ap.parse_args()
     if a.seed is not None:
         random.seed(a.seed)
     for t in range(a.cases):
         inp = gen_case()
-        rc_fast, out_fast = run(a.fast, inp)
-        rc_naive, out_naive = run(a.naive, inp)
+        rc_fast, out_fast = run(a.fast, inp, a.timeout)
+        rc_naive, out_naive = run(a.naive, inp, a.timeout)
 
         if rc_fast != 0 or rc_naive != 0:
             print("crash/timeout at test", t, "(fast_rc", rc_fast, "naive_rc", rc_naive, ")")
