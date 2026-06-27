@@ -130,6 +130,21 @@ tools/tune-local.sh /tmp/c.tsv 0.5 max-score
 
 ---
 
+## Codex セカンドオピニオン（任意）
+
+実装を Codex CLI（OpenAI）に **read-only** で独立レビュー/検証させ、Claude が結果を取り込むパイプライン。
+独立視点で見落としを減らし、レビュー/検証を別エンジンに逃がしてトークンを分散する。詳細は [docs/codex-pipeline.md](docs/codex-pipeline.md)。
+
+```bash
+tools/codex-review.sh diff      # 現在の git 差分を Codex がレビュー
+tools/codex-review.sh result    # results/latest/ の富岳スナップショットを Codex が分析
+```
+
+> Codex の入口は `AGENTS.md`（Claude と同一の `results/` スナップショット読解手順を記載）。
+> `codex exec` は read-only サンドボックスなのでソースは編集しない（検証台に徹する）。
+
+---
+
 ## 本選当日の手順
 
 ```bash
@@ -149,7 +164,7 @@ tools/fugaku-run.sh stencil <BUDGET_SEC>
 > **注意**: `src/main.cpp` は存在しない。テンプレートを直接編集する。  
 > 各テンプレ冒頭の `🎯 当日の手順` に「どこを触るか・何を忘れないか」を集約済み。  
 > I/O 配線は `src/contest.cpp`（fastio の読む→解く→書く雛形）で実証済み。  
-> `make test-contest` / `bash tests/judge.sh tests` が動く（`*.in`/`*.out` を足すと一括判定）。  
+> `make test-contest`、または `make contest && bash tests/judge.sh tests` で一括判定（`*.in`/`*.out` を足す）。  
 > `make stress` は `solver_naive.cpp` に愚直解を書いてから使う（現状は空スタブ）。
 
 ---
@@ -175,19 +190,26 @@ final-prep/
 │   ├── fugaku-wait.sh      # pjstat ポーリング
 │   ├── fugaku-fetch.sh     # 結果回収
 │   ├── fugaku-tune.sh      # バッチ掃引 (1ジョブでN構成。fugaku-run のバッチ版)
+│   ├── fugaku-cancel.sh    # ジョブ削除 (pjdel。暴走/ミスジョブ即停止)
 │   ├── fugaku-config.env.template  # アカウント設定テンプレート
 │   ├── check-mpi.sh        # ローカル4ランクで MPI 経路を自動検証 (make test-mpi)
 │   ├── tune-sweep.sh       # 測定ループ (local/富岳 共用の心臓部)
 │   ├── tune-local.sh       # ローカル掃引リハ (mpirun。富岳前の予行演習)
 │   ├── gen_configs.py      # 探索空間 → configs.tsv (LHS/grid・丸め・重複除去)
 │   ├── update_incumbent.py # results.csv → state/incumbent.json (改善時のみ)
+│   ├── codex-review.sh     # Codex セカンドオピニオン (read-only レビュー/検証)
 │   ├── stress.py           # Fast vs Naive 比較（課題実装後に使用）
-│   └── benchmark.py        # Fast の速度計測
-├── jobs/                   # pjsub 参照テンプレート (tune.pjm.template = バッチ掃引ジョブ)
+│   ├── benchmark.py        # Fast の速度計測
+│   └── runner.sh           # ⚠️ 旧ローカルランナー (src/main.cpp 参照・現構成では未整合)
+├── jobs/                   # pjsub 参照テンプレート
+│   ├── skeleton.job / stencil.job / search.job   # 手動投入用
+│   └── tune.pjm.template   # バッチ掃引ジョブ (fugaku-tune.sh が生成)
 ├── autotune/
 │   └── spaces/             # 探索空間定義 search.tsv / stencil.tsv (当日埋める)
 ├── cases/
 │   └── sample.in           # ダミー入力（課題に合わせて書き換え）
+├── tests/                  # サンプル *.in/*.out + judge.sh (一括正誤判定)
+├── scripts/                # ⚠️ profile.sh / time_omp.sh (src/main.cpp 参照・旧ツール)
 ├── docs/
 │   ├── fugaku-workflow.md  # 富岳インフラ詳細設計
 │   ├── fugaku-ssh-template.txt
@@ -195,12 +217,16 @@ final-prep/
 │   ├── design-infra.md     # 設計思想: インフラ/ハーネス/全体 (なぜ。テンプレ以外)
 │   ├── problem_notes.md    # 当日プレイブック（初動手順 + テンプレ選択ツリー + 記入欄）
 │   ├── experiments.md      # 最適化レシピ集（ROI順）+ 実験ログ表
-│   └── autotune.md         # オートチューニング運用ガイド (操作/3層モデル/Day1/堅牢化記録)
+│   ├── decisions.md        # 意思決定ログ予定地（現状 空）
+│   ├── autotune.md         # オートチューニング運用ガイド (操作/3層モデル/Day1/堅牢化記録)
+│   ├── codex-pipeline.md   # Claude×Codex セカンドオピニオン・パイプライン
+│   └── repository-overview.html  # 外部向け総覧 (単体HTML)
 ├── results/                # .gitignore済み（富岳結果。tune/ にバッチ掃引結果）
 ├── state/                  # .gitignore済み（incumbent.json = 命綱。.gitkeep のみ追跡）
 ├── build/                  # .gitignore済み
+├── AGENTS.md               # Codex CLI 指示書 (Claude の CLAUDE.md 相当・Codex版コンテキスト)
 ├── Makefile
-└── CLAUDE.md
+└── README.md
 ```
 
 ---

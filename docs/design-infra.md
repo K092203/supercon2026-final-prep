@@ -32,7 +32,7 @@
 ```
 WSL2 側 (頭脳)                      富岳 (測定器)
   AI / Claude Code                    ソースを受け取る
-  configs 生成 (LHS / 将来GP)         mpiFCC ビルド
+  configs 生成 (LHS / 将来GP)         mpiFCCpx ビルド
   results 解析・incumbent 管理         ジョブ実行 = N構成の測定
   ソース編集・state 永続化             results.csv 出力
 ```
