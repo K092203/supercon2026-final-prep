@@ -15,6 +15,11 @@ source "$CONFIG"
 
 BUDGET_SEC="${1:-${BUDGET_SEC:-1750}}"
 
+# 環境固定 (config 駆動・空なら現状維持)。module は非対話 ssh で未定義の場合あり→Day1要確認。
+MODLOAD=""
+[ -n "${FUGAKU_MODULES:-}" ] && MODLOAD="module load ${FUGAKU_MODULES} && "
+CXX="${FUGAKU_CXX:-mpiFCCpx}"
+
 echo "=== [1/2] rsync: src/ → REMOTE/src/, Makefile → REMOTE/ ($FUGAKU_HOST)"
 # src は REMOTE/src/ へ送る (Makefile が src/xxx.cpp を参照するため。直下に平坦化しない)。
 # --delete は src/ 配下のみに限定 = results/ build/ tools/ を絶対に消さない。
@@ -29,7 +34,7 @@ REMOTE_BUILD_LOG="$FUGAKU_REMOTE_DIR/results/_build/build-latest.log"
 BUILD_RC=0
 ssh "$FUGAKU_HOST" \
   "cd $FUGAKU_REMOTE_DIR && mkdir -p build/fugaku results/_build && \
-   make fugaku BUDGET_SEC=$BUDGET_SEC > results/_build/build-latest.log 2>&1" \
+   { ${MODLOAD}make fugaku CXX_FUGAKU=$CXX BUDGET_SEC=$BUDGET_SEC ; } > results/_build/build-latest.log 2>&1" \
   || BUILD_RC=$?
 
 # 成否に関わらずビルドログを手元へ (成功時も AI が警告を読める)

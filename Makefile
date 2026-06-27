@@ -1,7 +1,7 @@
 # =====================================================================
 # SuperCon2026 final-prep — Makefile
 #   ローカル (g++): make          → build/{skeleton,stencil,stencil_blocked,search}
-#   富岳 (mpiFCC) : make fugaku   → build/fugaku/{skeleton,stencil,stencil_blocked,search}
+#   富岳(mpiFCCpx): make fugaku   → build/fugaku/{skeleton,stencil,stencil_blocked,search}
 #   掃引リハ      : make tune-local CONFIGS=<configs.tsv>  (詳細 docs/autotune.md)
 # =====================================================================
 
@@ -12,8 +12,10 @@ BUDGET_OVERRIDE = $(if $(BUDGET_SEC),-DBUDGET_SEC=$(BUDGET_SEC),)
 CXX_LOCAL    = g++
 FLAGS_LOCAL  = -std=c++17 -O2 -fopenmp -Wall -Wextra -Isrc $(BUDGET_OVERRIDE)
 
-# ---------- 富岳提出用 (mpiFCC / DUSE_MPI) ----------
-CXX_FUGAKU   = mpiFCC
+# ---------- 富岳提出用 (mpiFCCpx / DUSE_MPI) ----------
+# ログインノードのクロスコンパイラ既定は mpiFCCpx (計算ノードのネイティブは mpiFCC)。
+# ?= なので config/コマンドラインで上書き可: make fugaku CXX_FUGAKU=mpiFCC
+CXX_FUGAKU   ?= mpiFCCpx
 # -Kzfill: 書き込み専用ストリーム(ステンシルの出力配列)で read-for-ownership を省きHBM帯域を節約
 FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512 -DUSE_MPI -Isrc $(BUDGET_OVERRIDE)
 
