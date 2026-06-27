@@ -123,9 +123,9 @@ bench: fast
 	python3 tools/benchmark.py
 
 # ---------- 富岳 ワンショット実行 (要: tools/fugaku-config.env) ----------
-# 使い方: make fugaku-run TARGET=skeleton BUDGET_SEC=1750
+# 使い方: make fugaku-run TARGET=contest BUDGET_SEC=1750 INPUT=tests/sample_01.in
 fugaku-run:
-	tools/fugaku-run.sh $(or $(TARGET),skeleton) $(or $(BUDGET_SEC),1750)
+	tools/fugaku-run.sh $(or $(TARGET),skeleton) $(or $(BUDGET_SEC),1750) $(INPUT)
 
 # ---------- ローカル掃引リハ (富岳経路の予行演習。要 OpenMPI) ----------
 # 使い方: make tune-local CONFIGS=/tmp/c.tsv BUDGET_SEC=1
