@@ -5,6 +5,17 @@
 
 ---
 
+## Day1 クイックスタート
+
+```bash
+bash tools/day1-smoke.sh                      # 環境/judge/python/shell を一括確認
+make contest && bash tests/judge.sh tests     # I/O 雛形ビルド + サンプル判定
+# 富岳へ単発投入（実入力ファイルを渡す）
+tools/fugaku-run.sh contest <BUDGET_SEC> tests/sample_01.in
+```
+
+---
+
 ## ターゲット環境
 
 | 項目 | 値 |
