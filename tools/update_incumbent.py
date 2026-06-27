@@ -20,7 +20,7 @@ def load_configs(path):
     out = {}
     if not os.path.exists(path):
         return out
-    with open(path, newline="") as f:
+    with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f, delimiter="\t"):
             if not row.get("id") or row["id"].startswith("#"):
                 continue
@@ -31,7 +31,7 @@ def load_configs(path):
 def load_results(path):
     """results.csv: id,elapsed,correct,score,exit_code,rep_done,notes → [rows]"""
     rows = []
-    with open(path, newline="") as f:
+    with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             rows.append(row)
     return rows
@@ -113,7 +113,7 @@ def main():
     prev = None
     if os.path.exists(args.state):
         try:
-            with open(args.state) as f:
+            with open(args.state, encoding="utf-8") as f:
                 prev = json.load(f)
         except (json.JSONDecodeError, OSError):
             prev = None
@@ -127,7 +127,7 @@ def main():
 
     # アトミック書き込み: 一時ファイル → rename。途中で落ちても incumbent.json が壊れない(命綱)。
     tmp = args.state + ".tmp"
-    with open(tmp, "w") as f:
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(incumbent, f, ensure_ascii=False, indent=2)
         f.write("\n")
     os.replace(tmp, args.state)

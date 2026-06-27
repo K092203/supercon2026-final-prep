@@ -27,7 +27,7 @@ VALID_TYPES = ("float", "int", "pow2", "choice")
 
 def read_space(path):
     knobs = []
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         for lineno, ln in enumerate(f, 1):
             ln = ln.strip()
             if not ln or ln.startswith("#"):
