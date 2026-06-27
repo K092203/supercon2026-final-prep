@@ -111,28 +111,36 @@ namespace fastio {
         return len;
     }
 
-    // 整数書き込み
+    // 整数書き込み。
+    //   * 各書き込み前に残量を確認し、不足なら flush() して obuf 溢れ(64MB超出力)を防ぐ。
+    //   * 符号付き最小値(INT_MIN/LLONG_MIN)の `-x` は符号付きオーバーフロー(UB)になるため、
+    //     unsigned で絶対値を作って桁分解する。
     inline void wi(int x) {
-        if (x < 0) { obuf[opos++] = '-'; x = -x; }
-        if (x == 0) { obuf[opos++] = '0'; return; }
+        if (opos + 12 > OBUF_SIZE) flush();
+        if (x < 0) obuf[opos++] = '-';
+        unsigned u = (x < 0) ? (0u - (unsigned)x) : (unsigned)x;
+        if (u == 0) { obuf[opos++] = '0'; return; }
         char tmp[12]; int len = 0;
-        while (x > 0) { tmp[len++] = (char)('0' + x % 10); x /= 10; }
+        while (u > 0) { tmp[len++] = (char)('0' + u % 10); u /= 10; }
         for (int i = len - 1; i >= 0; --i) obuf[opos++] = tmp[i];
     }
     inline void wll(long long x) {
-        if (x < 0) { obuf[opos++] = '-'; x = -x; }
-        if (x == 0) { obuf[opos++] = '0'; return; }
-        char tmp[20]; int len = 0;
-        while (x > 0) { tmp[len++] = (char)('0' + x % 10); x /= 10; }
+        if (opos + 24 > OBUF_SIZE) flush();
+        if (x < 0) obuf[opos++] = '-';
+        unsigned long long u = (x < 0) ? (0ULL - (unsigned long long)x) : (unsigned long long)x;
+        if (u == 0) { obuf[opos++] = '0'; return; }
+        char tmp[24]; int len = 0;
+        while (u > 0) { tmp[len++] = (char)('0' + u % 10); u /= 10; }
         for (int i = len - 1; i >= 0; --i) obuf[opos++] = tmp[i];
     }
     inline void wf(double x, int prec = 6) {
+        if (opos + 80 > OBUF_SIZE) flush();
         char tmp[64]; snprintf(tmp, sizeof(tmp), "%.*f", prec, x);
         for (int i = 0; tmp[i]; ++i) obuf[opos++] = tmp[i];
     }
-    inline void wc(char c)        { obuf[opos++] = c; }
-    inline void ws(const char* s) { while (*s) obuf[opos++] = *s++; }
-    inline void wn()               { obuf[opos++] = '\n'; }  // 改行ショートカット
+    inline void wc(char c)        { if (opos + 1 > OBUF_SIZE) flush(); obuf[opos++] = c; }
+    inline void ws(const char* s) { while (*s) { if (opos + 1 > OBUF_SIZE) flush(); obuf[opos++] = *s++; } }
+    inline void wn()              { if (opos + 1 > OBUF_SIZE) flush(); obuf[opos++] = '\n'; }  // 改行
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

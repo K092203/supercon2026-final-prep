@@ -63,6 +63,15 @@ int main(int argc, char** argv) {
     // 行を各ランクに分配 (余りは先頭ランクへ)
     int base = H / nranks, rem = H % nranks;
     int lh = base + (rank < rem ? 1 : 0); // このランクの内部行数
+    // 局所行が 0 (nranks > H) だと update_row(1) が範囲外。サイレント誤結果を防ぎ明示停止。
+    if (lh < 1) {
+        std::fprintf(stderr,    // 失敗したランク自身が出す (lh<1 は rank0 とは限らない)
+            "[stencil] ERROR: rank=%d 局所行 lh=%d (nranks=%d > H=%d)。ランクを減らすこと\n", rank, lh, nranks, H);
+#ifdef USE_MPI
+        MPI_Abort(MPI_COMM_WORLD, 1);
+#endif
+        return 1;
+    }
     // リーディング次元のパディング: W が 2 のべき(例 8192)だと行間が同じキャッシュセットに
     // 写像され n[j]/c[j]/s[j] が衝突して L1/L2 ミスが激増する。8 要素ずらして回避する。
     // (ハロ交換は各行先頭の実 W 要素のみを送るためパディングは透過)

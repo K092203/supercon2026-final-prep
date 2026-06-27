@@ -153,6 +153,16 @@ int main(int argc, char** argv) {
     const double BUDGET = tune::budget(args, BUDGET_SEC); // --budget で実行時上書き (BT/RB/CB は -D=リビルド層)
     const int base = H / nranks, rem = H % nranks;
     const int lh = base + (rank < rem ? 1 : 0);
+    // lh < BT だと deep-halo 交換が内部行でなく ghost を含み MPI 分割で誤結果。明示停止。
+    if (lh < (int)BT) {
+        std::fprintf(stderr,    // 失敗したランク自身が出す (lh<BT は rank0 とは限らない)
+            "[blocked] ERROR: rank=%d 局所行 lh=%d < BT=%d (nranks=%d が H=%d に対し多すぎ)。ランクを減らすか BT を下げる\n",
+            rank, lh, (int)BT, nranks, H);
+#ifdef USE_MPI
+        MPI_Abort(MPI_COMM_WORLD, 1);
+#endif
+        return 1;
+    }
     const size_t stride = (size_t)W + PAD;
     const size_t rows = (size_t)lh + 2 * BT;      // 上下に BT 段の deep-ghost
     const bool top_bndry = (rank == 0), bot_bndry = (rank == nranks - 1);
