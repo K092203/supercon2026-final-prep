@@ -119,6 +119,23 @@ results/
 > `outcome`: completed / timeout / failed / killed-or-incomplete。`build_status`: ok / error。
 > ビルド失敗時はジョブが出ないため `results/last-build.log` に出力が残る。
 
+## 失敗時のトラブルシュート (どこを見るか)
+
+本番中に詰まったとき、症状から確認場所を即引けるように。実機投入前に一度目を通しておく。
+
+| 症状 | まず見る | 原因/対処 |
+|---|---|---|
+| 存在しない target を指定 | スクリプトの stderr | `fugaku-run.sh`/`submit.sh` が `exit 2`(許可: skeleton/stencil/stencil_blocked/search/contest) |
+| 存在しない input を指定 | スクリプトの stderr | `submit.sh` が `ERROR: input not found` で停止 |
+| 予算 > PJM elapse | submit の stderr | `BUDGET_SEC + 余裕(既定30s) > FUGAKU_ELAPSE` で投入前に停止。両者を当日制限に合わせる |
+| ジョブが結果を残さない | `results/<jobid>/status.txt` の有無 | 無ければ PJM に kill された(elapse 超過/資源)。`meta.json` の `outcome=killed-or-incomplete` |
+| ビルド失敗 | `results/last-build.log` | mpiFCCpx のエラー。ジョブ自体が出ない |
+| 実行時エラー/異常終了 | `stderr.txt` / `exit_code.txt` | solver の crash。exit_code≠0 |
+| 暴走/無限ループ | `pjstat` で RUN 継続 | `tools/fugaku-cancel.sh <jobid>`(pjdel)で即停止 |
+| timeout | `meta.json` の `outcome=timeout` | 予算内に出力できていない。BUDGET_SEC か アルゴリズムを見直す |
+| どのコードの結果か不明 | `meta.json` の commit/dirty/input_sha256 | dirty>0 は未コミット変更ありを示す |
+| 直近ジョブID | `results/.last-jobid` | fetch/cancel に使う |
+
 ## ControlMaster による OTP の扱い
 
 初回接続 (`ssh fugaku`) で OTP を入力すると `ControlPersist 4h` の間は
