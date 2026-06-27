@@ -16,20 +16,33 @@ def gen_case():
     return str(n) + "\n" + " ".join(map(str, a)) + "\n"
 
 def run(cmd, inp):
-    res = subprocess.run(
-        [cmd],
-        input=inp.encode(),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        timeout=2
-    )
-    return res.stdout.decode().strip()
+    # (returncode, output) を返す。timeout/クラッシュを「空出力一致で PASS」と誤判定しないため。
+    try:
+        res = subprocess.run(
+            [cmd],
+            input=inp.encode(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=2
+        )
+    except subprocess.TimeoutExpired:
+        return 124, "TIMEOUT"
+    if res.returncode != 0:
+        return res.returncode, res.stderr.decode().strip()
+    return 0, res.stdout.decode().strip()
 
 def main():
     for t in range(10000):
         inp = gen_case()
-        out_fast = run(FAST, inp)
-        out_naive = run(NAIVE, inp)
+        rc_fast, out_fast = run(FAST, inp)
+        rc_naive, out_naive = run(NAIVE, inp)
+
+        if rc_fast != 0 or rc_naive != 0:
+            print("crash/timeout at test", t, "(fast_rc", rc_fast, "naive_rc", rc_naive, ")")
+            print("input:"); print(inp)
+            print("fast:");  print(out_fast)
+            print("naive:"); print(out_naive)
+            sys.exit(1)
 
         if out_fast != out_naive:
             print("WA found at test", t)

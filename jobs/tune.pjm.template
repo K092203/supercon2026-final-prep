@@ -26,9 +26,13 @@ echo "tune round=${ROUND} budget=__BUDGET__ elapse_sec=__ELAPSE_SEC__" > "${RDIR
 date -u +%Y-%m-%dT%H:%M:%SZ >> "${RDIR}/meta.txt"
 
 # 測定ループ: launcher=mpiexec / bindir=build/fugaku / 入力=__INPUT__ (無ければ /dev/null)
+SWEEP_RC=0
 bash tools/tune-sweep.sh \
   "${RDIR}/configs.tsv" "${RDIR}/results.csv" \
-  "mpiexec" "build/fugaku" "__BUDGET__" "__ELAPSE_SEC__" "__INPUT__"
+  "mpiexec" "build/fugaku" "__BUDGET__" "__ELAPSE_SEC__" "__INPUT__" || SWEEP_RC=$?
 
-echo "completed" >> "${RDIR}/meta.txt"
+# blind "completed" でなく実際の sweep 終了コードを記録 (失敗を取りこぼさない)
+echo "completed sweep_rc=${SWEEP_RC}" >> "${RDIR}/meta.txt"
 date -u +%Y-%m-%dT%H:%M:%SZ >> "${RDIR}/meta.txt"
+# 致命的設定エラー(重複id等)はジョブ終了コードにも伝播 → pjstat で失敗として見える
+exit ${SWEEP_RC}

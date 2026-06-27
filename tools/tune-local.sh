@@ -34,9 +34,16 @@ mkdir -p "$RDIR"
 cp "$CONFIGS" "$RDIR/configs.tsv"
 
 echo "== sweep (launcher=mpirun, bindir=build/mpi, budget=${BUDGET}s) =="
+SWEEP_RC=0
 bash "$SCRIPT_DIR/tune-sweep.sh" \
   "$RDIR/configs.tsv" "$RDIR/results.csv" \
-  "mpirun --oversubscribe" "build/mpi" "$BUDGET" "$ELAPSE" "$INPUT"
+  "mpirun --oversubscribe" "build/mpi" "$BUDGET" "$ELAPSE" "$INPUT" || SWEEP_RC=$?
+# tune-sweep が非ゼロで終わるのは致命的設定エラー(重複id等)のみ → 失敗を伝播して中断。
+# (anytime な部分掃引は tune-sweep 内で rc=0。ここに来るのは「測れていない」失敗のみ)
+if [ "$SWEEP_RC" -ne 0 ]; then
+  echo "❌ tune-sweep が rc=$SWEEP_RC で失敗 (重複id/設定エラー等)。incumbent 更新せず終了。"
+  exit "$SWEEP_RC"
+fi
 
 echo ""
 echo "--- results.csv ---"
