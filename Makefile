@@ -85,6 +85,7 @@ fugaku:
 	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/stencil.cpp         -o build/fugaku/stencil
 	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/stencil_blocked.cpp -o build/fugaku/stencil_blocked
 	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/search.cpp          -o build/fugaku/search
+	$(CXX_FUGAKU) $(FLAGS_FUGAKU) src/contest.cpp         -o build/fugaku/contest
 
 # ---------- 個別テスト (シングルプロセス / MPI ランタイム不要) ----------
 test-skeleton: skeleton
@@ -97,10 +98,12 @@ test-search: search
 	./build/search
 
 # ---------- stress.py / benchmark.py との互換維持 ----------
-# build/fast = build/skeleton のシム (tools/stress.py が参照)
-fast: skeleton
+# build/fast = 本命 solver のシム (tools/stress.py / benchmark.py が参照)。
+# 既定は contest (本選の実 solver)。skeleton 等にしたい時は make fast FAST_TARGET=skeleton。
+FAST_TARGET ?= contest
+fast: $(FAST_TARGET)
 	mkdir -p build
-	cp build/skeleton build/fast
+	cp build/$(FAST_TARGET) build/fast
 
 naive:
 	mkdir -p build
