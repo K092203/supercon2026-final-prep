@@ -1,7 +1,8 @@
 # =====================================================================
 # SuperCon2026 final-prep — Makefile
-#   ローカル (g++): make          → build/skeleton, build/stencil, build/search
-#   富岳 (mpiFCC) : make fugaku   → build/fugaku/{skeleton,stencil,search}
+#   ローカル (g++): make          → build/{skeleton,stencil,stencil_blocked,search}
+#   富岳 (mpiFCC) : make fugaku   → build/fugaku/{skeleton,stencil,stencil_blocked,search}
+#   掃引リハ      : make tune-local CONFIGS=<configs.tsv>  (詳細 docs/autotune.md)
 # =====================================================================
 
 # ---------- 時間予算オーバーライド: make fugaku BUDGET_SEC=1750 ----------
@@ -21,6 +22,7 @@ FLAGS_FUGAKU = -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512 -DU
         test-skeleton test-stencil test-search \
         local-mpi test-mpi \
         contest contest-fugaku test-contest \
+        tune-local \
         fast naive run test stress bench clean
 
 # ---------- デフォルト: ローカル 4 バイナリ ----------
@@ -119,6 +121,11 @@ bench: fast
 # 使い方: make fugaku-run TARGET=skeleton BUDGET_SEC=1750
 fugaku-run:
 	tools/fugaku-run.sh $(or $(TARGET),skeleton) $(or $(BUDGET_SEC),1750)
+
+# ---------- ローカル掃引リハ (富岳経路の予行演習。要 OpenMPI) ----------
+# 使い方: make tune-local CONFIGS=/tmp/c.tsv BUDGET_SEC=1
+tune-local:
+	tools/tune-local.sh $(CONFIGS) $(or $(BUDGET_SEC),2)
 
 # ---------- clean ----------
 clean:

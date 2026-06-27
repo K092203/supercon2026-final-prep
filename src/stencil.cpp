@@ -27,6 +27,7 @@
 //   ⚠️ first-touch 並列初期化と stride パディングは消さない (HBM 帯域が半減する)
 // ─────────────────────────────────────────────────────────────────────
 #include "common.hpp"
+#include "tune_args.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
@@ -37,7 +38,6 @@
 #endif
 
 int main(int argc, char** argv) {
-    (void)argc; (void)argv;
     int rank = 0, nranks = 1;
 #ifdef USE_MPI
     int provided = 0;
@@ -50,12 +50,14 @@ int main(int argc, char** argv) {
 #endif
 
     // ===== 課題パラメータ (ここを書き換える) =============================
-    const int H = 8192, W = 8192;     // 全体格子サイズ
-    const int STEPS = 200;            // 時間ステップ数 (deadline 超過時は途中で break)
+    tune::Args args(argc, argv);
+    const int H = (int)args.geti("h", 8192), W = (int)args.geti("w", 8192); // 全体格子サイズ
+    const int STEPS = (int)args.geti("steps", 200);  // 時間ステップ数 (deadline 超過時は途中で break)
     const float D = 0.20f, dt = 1.0f; // 拡散係数・時間刻み
 #ifndef BUDGET_SEC
 #define BUDGET_SEC 5.0
 #endif
+    const double BUDGET = tune::budget(args, BUDGET_SEC); // --budget で実行時上書き
     // ===================================================================
 
     // 行を各ランクに分配 (余りは先頭ランクへ)
@@ -64,7 +66,7 @@ int main(int argc, char** argv) {
     // リーディング次元のパディング: W が 2 のべき(例 8192)だと行間が同じキャッシュセットに
     // 写像され n[j]/c[j]/s[j] が衝突して L1/L2 ミスが激増する。8 要素ずらして回避する。
     // (ハロ交換は各行先頭の実 W 要素のみを送るためパディングは透過)
-    const int PAD = 8;
+    const int PAD = (int)args.geti("pad", 8);
     size_t stride = (size_t)W + PAD;
     size_t rows = (size_t)lh + 2;         // 上下ゴースト各 1 行
 
@@ -87,7 +89,7 @@ int main(int argc, char** argv) {
     }
 
     double t0 = wtime();
-    const double deadline = t0 + BUDGET_SEC;
+    const double deadline = t0 + BUDGET;
 
     // 1 行更新カーネル (5点ラプラシアン + 反応項。内側 j ループが unit-stride で SVE 化される)。
     // a/b は std::swap でポインタが入れ替わるため毎回キャプチャ参照経由で読む。
@@ -146,8 +148,11 @@ int main(int argc, char** argv) {
     MPI_Reduce(&local_sum, &total, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 #endif
     double elapsed = wtime() - t0;
-    if (rank == 0)
+    if (rank == 0) {
         std::printf("[stencil] sum=%.6e  steps=%d/%d  %.3fs\n", total, final_step, STEPS, elapsed);
+        // correct = 規定 STEPS を完了したか (deadline 切れ=未完=0)。score は確認用チェックサム。
+        tune::report(total, (final_step >= STEPS) ? 1 : 0, elapsed);
+    }
 
 #ifdef USE_MPI
     MPI_Finalize();

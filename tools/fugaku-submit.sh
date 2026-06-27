@@ -10,6 +10,10 @@ source "$SCRIPT_DIR/fugaku-config.env"
 TARGET="${1:-skeleton}"
 BUDGET_SEC="${2:-${BUDGET_SEC:-1750}}"
 
+# ソース来歴 (WSL 側で取得 → meta に埋め、結果がどのコードのものか AI が相関できる)
+GIT_COMMIT=$(cd "$REPO_ROOT" && git rev-parse --short HEAD 2>/dev/null || echo nogit)
+GIT_DIRTY=$(cd "$REPO_ROOT" && git status --short 2>/dev/null | wc -l | tr -d ' ')
+
 # ジョブスクリプトを動的生成 (pjsub ディレクティブは変数展開不可のためここで埋め込む)
 JOB_SCRIPT=$(cat << ENDJOB
 #!/bin/bash
@@ -34,14 +38,26 @@ RESULTS="${FUGAKU_REMOTE_DIR}/results/\${PJM_JOBID}"
 mkdir -p "\${RESULTS}"
 
 echo "target=${TARGET} budget=${BUDGET_SEC} ranks=${FUGAKU_MPI_RANKS} threads=${FUGAKU_OMP_THREADS}" > "\${RESULTS}/meta.txt"
+echo "commit=${GIT_COMMIT} dirty=${GIT_DIRTY}" >> "\${RESULTS}/meta.txt"
 date -u +%Y-%m-%dT%H:%M:%SZ >> "\${RESULTS}/meta.txt"
 
-mpiexec -n ${FUGAKU_MPI_RANKS} \\
+# 資源計測: /usr/bin/time の -v -o が実際に動く時だけラップする。
+#   存在チェックだけでは BSD time 等で -v 不明 → ラップ失敗 → ソルバ未実行で本番ジョブが死ぬ。
+#   probe (true で試す) に通った時だけ採用。ダメなら素通り=本計算を絶対に壊さない。
+TIMED=""
+if /usr/bin/time -v -o /dev/null true >/dev/null 2>&1; then
+  TIMED="/usr/bin/time -v -o \${RESULTS}/resource.txt"
+fi
+START=\$(date +%s)
+\${TIMED} mpiexec -n ${FUGAKU_MPI_RANKS} \\
   "${FUGAKU_REMOTE_DIR}/build/fugaku/${TARGET}" \\
   > "\${RESULTS}/stdout.txt" 2> "\${RESULTS}/stderr.txt"
-
 EXIT_CODE=\$?
+WALL=\$(( \$(date +%s) - START ))
+
 echo "\${EXIT_CODE}" > "\${RESULTS}/exit_code.txt"
+# status.txt は「正常完了の印」。PJM に kill されるとここに到達せず=未完を示す。
+echo "completed exit=\${EXIT_CODE} wall_sec=\${WALL}" > "\${RESULTS}/status.txt"
 echo "completed" >> "\${RESULTS}/meta.txt"
 date -u +%Y-%m-%dT%H:%M:%SZ >> "\${RESULTS}/meta.txt"
 exit \${EXIT_CODE}

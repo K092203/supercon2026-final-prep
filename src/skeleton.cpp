@@ -25,6 +25,7 @@
 //   ⚠️ 入力が 8MB 超になるなら utilities.hpp の IBUF_SIZE を増やす (既定64MB)
 // ─────────────────────────────────────────────────────────────────────
 #include "common.hpp"
+#include "tune_args.hpp"
 #include <cstdio>
 #include <vector>
 #include <unistd.h>
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
 #ifdef _OPENMP
     maxth = omp_get_max_threads();
 #endif
-    (void)argc; (void)argv;
+    tune::Args args(argc, argv);
     char host[256] = "local";
     gethostname(host, sizeof(host));
 
@@ -64,7 +65,7 @@ int main(int argc, char** argv) {
 #ifndef BUDGET_SEC
 #define BUDGET_SEC 5.0
 #endif
-    const double BUDGET = BUDGET_SEC;    // 本選では make fugaku BUDGET_SEC=1750
+    const double BUDGET = tune::budget(args, BUDGET_SEC);    // --budget で実行時上書き
     const double deadline = wtime() + BUDGET;
     long long local_count = 0;
     double t0 = wtime();
@@ -89,8 +90,10 @@ int main(int argc, char** argv) {
     MPI_Allreduce(&local_count, &global_count, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
 #endif
     double elapsed = wtime() - t0;
-    if (rank == 0)
+    if (rank == 0) {
         std::printf("[result] in_circle=%lld  elapsed=%.3fs\n", global_count, elapsed);
+        tune::report((double)global_count, 1, elapsed); // score=最大化したい量
+    }
     // ===================================================================
 
 #ifdef USE_MPI

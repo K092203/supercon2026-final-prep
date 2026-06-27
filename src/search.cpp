@@ -25,6 +25,7 @@
 //   ⚠️ delta() は必ず cost() と整合させる (ズレると cur がドリフトし無効解になる)
 // ─────────────────────────────────────────────────────────────────────
 #include "common.hpp"
+#include "tune_args.hpp"
 #include <cstdio>
 #include <vector>
 #include <cmath>
@@ -67,7 +68,6 @@ struct Problem {
 // =====================================================================
 
 int main(int argc, char** argv) {
-    (void)argc; (void)argv;
     int rank = 0, nranks = 1;
 #ifdef USE_MPI
     int provided = 0;
@@ -80,6 +80,13 @@ int main(int argc, char** argv) {
     maxth = omp_get_max_threads();
 #endif
 
+    // ---- チューニングノブ (argv/env で上書き可。既定値は手チューン相当) ----
+    tune::Args   args(argc, argv);
+    const double T0      = args.getf("sa-temp", 1.0);    // 初期温度
+    const double cooling = args.getf("cooling", 0.999);  // 冷却率
+    const int    iters   = (int)args.geti("iters", 20000); // SYNC 内の反復数
+    const double SYNC    = args.getf("sync", 0.5);       // この秒ごとに全体ベストを集約
+
     // ---- 問題生成 (本選では入力読込に置換) ---
     Problem P; P.N = 400; P.Q.resize((size_t)P.N * P.N);
     { Rng g; g.seed(12345);
@@ -90,9 +97,9 @@ int main(int argc, char** argv) {
 #ifndef BUDGET_SEC
 #define BUDGET_SEC 5.0
 #endif
-    const double BUDGET = BUDGET_SEC;   // 本選では make fugaku BUDGET_SEC=1750
-    const double SYNC   = 0.5;   // この秒ごとに全体ベストを集約
-    const double t_end  = wtime() + BUDGET;
+    const double BUDGET  = tune::budget(args, BUDGET_SEC); // --budget で実行時上書き
+    const double t_start = wtime();
+    const double t_end   = t_start + BUDGET;
 
     std::vector<uint8_t> best(P.N, 0);
     double best_score = P.cost(best);
@@ -114,11 +121,11 @@ int main(int argc, char** argv) {
             Rng r; r.seed(0xABCDEFULL ^ ((uint64_t)rank << 40) ^ ((uint64_t)tid << 8)
                           ^ (uint64_t)(t_sync * 1e3));
             std::vector<uint8_t> x = best;
-            double cur = best_score, T = 1.0;
+            double cur = best_score, T = T0;
             std::vector<uint8_t> lb = x; double ls = cur;
 
             while (wtime() < next_sync) {
-                for (int it = 0; it < 20000; ++it) {
+                for (int it = 0; it < iters; ++it) {
                     int i = r.below(P.N);
                     double d = P.delta(x, i);
                     if (d > 0 || r.uniform() < std::exp(d / T)) {
@@ -126,8 +133,8 @@ int main(int argc, char** argv) {
                         if (cur > ls) { ls = cur; lb = x; }
                     }
                 }
-                T *= 0.999; // 冷却スケジュール (課題に合わせて調整)
-                if (T < 1e-3) T = 1.0; // 再加熱
+                T *= cooling; // 冷却スケジュール (--cooling で調整)
+                if (T < 1e-3) T = T0; // 再加熱
             }
             th_best[tid] = lb; th_score[tid] = ls;
         }
@@ -159,9 +166,12 @@ int main(int argc, char** argv) {
         t_sync = wtime() + SYNC;
     }
 
-    if (rank == 0)
+    if (rank == 0) {
         std::printf("[search] best=%.6f  ranks=%d threads=%d\n",
                     best_score, nranks, maxth);
+        // 当日: solver_naive.cpp の全評価と best 解を照合して correct をセット (既定 1)
+        tune::report(best_score, 1, wtime() - t_start);
+    }
 #ifdef USE_MPI
     MPI_Finalize();
 #endif

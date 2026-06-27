@@ -19,6 +19,7 @@
 //   長時間探索なら Budget budget(秒); while(!budget.expired()){...} で締切管理。
 // =====================================================================
 #include "utilities.hpp"
+#include "tune_args.hpp"
 #include <climits>
 
 int main(int argc, char** argv) {
@@ -29,6 +30,7 @@ int main(int argc, char** argv) {
 #else
     (void)argc; (void)argv;
 #endif
+    double t0 = wtime();
 
     // ---- 1) 入力読み込み (CUSTOMIZE: 課題フォーマットに合わせる) ----
     fastio::init();
@@ -51,6 +53,7 @@ int main(int argc, char** argv) {
         fastio::wi(mx);
         fastio::wn();
         fastio::flush();
+        tune::report((double)sum, 1, wtime() - t0); // I/O 配線サンプルなので score=sum
     }
 
 #ifdef USE_MPI
