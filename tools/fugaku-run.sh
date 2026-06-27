@@ -45,17 +45,26 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 TARGET="${1:-skeleton}"
 BUDGET_SEC="${2:-1750}"
+INPUT="${3:-}"   # solver が stdin から問題入力を読む場合に渡す (例: tests/sample_01.in)
+
+# target 正規化と検証 (stencil-blocked と stencil_blocked の混同・typo を弾く)
+case "$TARGET" in stencil-blocked) TARGET=stencil_blocked ;; esac
+case "$TARGET" in
+  skeleton|stencil|stencil_blocked|search|contest) ;;
+  *) echo "ERROR: unknown target: $TARGET (skeleton|stencil|stencil_blocked|search|contest)"; exit 2 ;;
+esac
+[ -n "$INPUT" ] && [ ! -f "$INPUT" ] && { echo "ERROR: input file not found: $INPUT"; exit 2; }
 
 echo "======================================================"
 echo " SuperCon2026 富岳実行ループ"
-echo " target=$TARGET  budget=${BUDGET_SEC}s"
+echo " target=$TARGET  budget=${BUDGET_SEC}s  input=${INPUT:-(なし)}"
 echo "======================================================"
 
 # [1] sync + build
 "$SCRIPT_DIR/fugaku-sync.sh" "$BUDGET_SEC"
 
 # [2] submit → JOBID
-SUBMIT_OUT=$("$SCRIPT_DIR/fugaku-submit.sh" "$TARGET" "$BUDGET_SEC")
+SUBMIT_OUT=$("$SCRIPT_DIR/fugaku-submit.sh" "$TARGET" "$BUDGET_SEC" "$INPUT")
 JOBID=$(echo "$SUBMIT_OUT" | grep 'JOBID=' | grep -oP '\d+')
 echo "$SUBMIT_OUT"
 echo ">>> JOBID=$JOBID"

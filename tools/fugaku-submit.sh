@@ -9,6 +9,17 @@ source "$SCRIPT_DIR/fugaku-config.env"
 
 TARGET="${1:-skeleton}"
 BUDGET_SEC="${2:-${BUDGET_SEC:-1750}}"
+INPUT="${3:-}"
+
+# 実入力ファイルを remote の固定パスへ送る (JOBID は submit 後にしか分からないため
+# inputs/current.dat に置き、ジョブ側で stdin にリダイレクト + 結果へ複製する)。
+REMOTE_INPUT="/dev/null"
+if [ -n "$INPUT" ]; then
+    [ -f "$INPUT" ] || { echo "ERROR: input not found: $INPUT" >&2; exit 1; }
+    ssh "$FUGAKU_HOST" "mkdir -p $FUGAKU_REMOTE_DIR/inputs" >&2
+    rsync -azq "$INPUT" "$FUGAKU_HOST:$FUGAKU_REMOTE_DIR/inputs/current.dat" >&2
+    REMOTE_INPUT="$FUGAKU_REMOTE_DIR/inputs/current.dat"
+fi
 
 # ソース来歴 (WSL 側で取得 → meta に埋め、結果がどのコードのものか AI が相関できる)
 GIT_COMMIT=$(cd "$REPO_ROOT" && git rev-parse --short HEAD 2>/dev/null || echo nogit)
@@ -52,6 +63,15 @@ echo "target=${TARGET} budget=${BUDGET_SEC} ranks=${FUGAKU_MPI_RANKS} threads=${
 echo "commit=${GIT_COMMIT} dirty=${GIT_DIRTY}" >> "\${RESULTS}/meta.txt"
 date -u +%Y-%m-%dT%H:%M:%SZ >> "\${RESULTS}/meta.txt"
 
+# 実行の再現情報を保存 (どの入力・引数・環境・ジョブで出た結果か)
+echo "mpiexec -n ${FUGAKU_MPI_RANKS} build/fugaku/${TARGET} < ${REMOTE_INPUT}" > "\${RESULTS}/argv.txt"
+env | grep -E '^(OMP_|PJM_)' | sort > "\${RESULTS}/env.txt" 2>/dev/null || true
+cp "\$0" "\${RESULTS}/job.sh" 2>/dev/null || true
+if [ "${REMOTE_INPUT}" != "/dev/null" ]; then
+  cp "${REMOTE_INPUT}" "\${RESULTS}/input.dat" 2>/dev/null || true
+  sha256sum "${REMOTE_INPUT}" 2>/dev/null | awk '{print \$1}' > "\${RESULTS}/input.sha256" || true
+fi
+
 ${MODLOAD_JOB}
 # 資源計測: /usr/bin/time の -v -o が実際に動く時だけラップする。
 #   存在チェックだけでは BSD time 等で -v 不明 → ラップ失敗 → ソルバ未実行で本番ジョブが死ぬ。
@@ -63,7 +83,7 @@ fi
 START=\$(date +%s)
 \${TIMED} mpiexec -n ${FUGAKU_MPI_RANKS} \\
   "${FUGAKU_REMOTE_DIR}/build/fugaku/${TARGET}" \\
-  > "\${RESULTS}/stdout.txt" 2> "\${RESULTS}/stderr.txt"
+  < "${REMOTE_INPUT}" > "\${RESULTS}/stdout.txt" 2> "\${RESULTS}/stderr.txt"
 EXIT_CODE=\$?
 WALL=\$(( \$(date +%s) - START ))
 
