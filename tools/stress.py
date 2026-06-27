@@ -1,13 +1,10 @@
+import argparse
 import subprocess
 import random
 import sys
 
 # CUSTOMIZE: gen_case() を本選の課題入力形式に合わせて書き換えること。
-# FAST  = build/fast (= build/skeleton のシム) — MPI なしで動く最適解
-# NAIVE = build/naive — 愚直 O(N²) 実装。出力が一致するか比較する。
-
-FAST = "./build/fast"
-NAIVE = "./build/naive"
+# fast/naive は引数で指定 (既定 ./build/fast。make fast FAST_TARGET=contest で本命 solver)。
 
 def gen_case():
     # CUSTOMIZE: 課題の入力形式に合わせてここを書き換える
@@ -32,10 +29,18 @@ def run(cmd, inp):
     return 0, res.stdout.decode().strip()
 
 def main():
-    for t in range(10000):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--fast", default="./build/fast")
+    ap.add_argument("--naive", default="./build/naive")
+    ap.add_argument("--cases", type=int, default=10000)
+    ap.add_argument("--seed", type=int, default=None)
+    a = ap.parse_args()
+    if a.seed is not None:
+        random.seed(a.seed)
+    for t in range(a.cases):
         inp = gen_case()
-        rc_fast, out_fast = run(FAST, inp)
-        rc_naive, out_naive = run(NAIVE, inp)
+        rc_fast, out_fast = run(a.fast, inp)
+        rc_naive, out_naive = run(a.naive, inp)
 
         if rc_fast != 0 or rc_naive != 0:
             print("crash/timeout at test", t, "(fast_rc", rc_fast, "naive_rc", rc_naive, ")")
