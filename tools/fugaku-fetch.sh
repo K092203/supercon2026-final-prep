@@ -44,6 +44,15 @@ if [ -f "$LOCAL_DIR/status.txt" ]; then
   else OUTCOME=failed; fi
 else OUTCOME=killed-or-incomplete; fi
 
+# 入力の同一性 + parsed #TUNE (どの入力で・何点だったかを meta だけで追える)
+INPUT_SHA=$(head -1 "$LOCAL_DIR/input.sha256" 2>/dev/null);
+if [ -n "$INPUT_SHA" ]; then INPUT_SHA_J="\"$INPUT_SHA\""; else INPUT_SHA_J=null; fi
+INPUT_BYTES=$(wc -c < "$LOCAL_DIR/input.dat" 2>/dev/null | tr -d ' '); [[ "$INPUT_BYTES" =~ ^[0-9]+$ ]] || INPUT_BYTES=null
+TLINE=$(grep '^#TUNE' "$LOCAL_DIR/stderr.txt" 2>/dev/null | tail -1)
+T_EL=$(sed -n 's/.*elapsed=\([0-9.eE+-]*\).*/\1/p' <<<"$TLINE"); [[ "$T_EL" =~ ^[0-9.eE+-]+$ ]] || T_EL=null
+T_SC=$(sed -n 's/.*score=\([0-9.eE+-]*\).*/\1/p'   <<<"$TLINE"); [[ "$T_SC" =~ ^[0-9.eE+-]+$ ]] || T_SC=null
+T_CO=$(sed -n 's/.*correct=\([0-9]*\).*/\1/p'      <<<"$TLINE"); [[ "$T_CO" =~ ^[0-9]+$ ]] || T_CO=null
+
 # AI 解析用 meta.json を生成 (= そのジョブの検死報告書のヘッダ)
 cat > "$LOCAL_DIR/meta.json" << METAEOF
 {
@@ -64,6 +73,9 @@ cat > "$LOCAL_DIR/meta.json" << METAEOF
   "max_rss_kb": $MAXRSS,
   "outcome": "$OUTCOME",
   "sched_status": "$SCHED",
+  "input_sha256": $INPUT_SHA_J,
+  "input_bytes": $INPUT_BYTES,
+  "tune": { "elapsed": $T_EL, "score": $T_SC, "correct": $T_CO },
   "fetched_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 METAEOF
