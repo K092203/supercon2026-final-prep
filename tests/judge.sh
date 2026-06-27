@@ -26,9 +26,21 @@ for IN in "$CASEDIR"/*.in; do
     OUT="${BASE}.out"
     NAME="$(basename "$BASE")"
 
-    # 実行
-    ACTUAL=$(./build/contest < "$IN" 2>/tmp/judge_stderr.txt || true)
-    STDERR=$(cat /tmp/judge_stderr.txt)
+    # 実行 (終了コードを必ず捕捉する。|| true で握り潰さない)
+    ERRFILE="$(mktemp)"
+    set +e
+    ACTUAL=$(./build/contest < "$IN" 2>"$ERRFILE")
+    RC=$?
+    set -e
+    STDERR=$(cat "$ERRFILE"); rm -f "$ERRFILE"
+
+    # 非ゼロ終了(segfault/assert/範囲外等)は .out の有無に関わらず FAIL
+    if [ "$RC" -ne 0 ]; then
+        echo "[FAIL] $NAME (exit=$RC)"
+        echo "$STDERR" | tail -10 | sed 's/^/    /'
+        FAIL=$((FAIL + 1))
+        continue
+    fi
 
     if [ -f "$OUT" ]; then
         EXPECTED=$(cat "$OUT")
@@ -42,13 +54,17 @@ for IN in "$CASEDIR"/*.in; do
             FAIL=$((FAIL + 1))
         fi
     else
-        # 期待出力なし → 実行のみ確認 (クラッシュなければ OK)
-        echo "[RUN ] $NAME (no .out file — execution only)"
-        echo "  stderr: $STDERR"
+        # 期待出力なし → クラッシュなしを確認したのみ (RUN_ONLY)。
+        # 制約検査をしたい場合は当日 tools/validate_output.py を実装し、ここで呼ぶ:
+        #   echo "$ACTUAL" >"$TMP"; python3 tools/validate_output.py "$IN" "$TMP" || FAIL=...
+        echo "[RUN ] $NAME (no .out file — 実行のみ確認/RUN_ONLY)"
         SKIP=$((SKIP + 1))
     fi
 done
 
 echo ""
 echo "Results: PASS=$PASS  FAIL=$FAIL  RUN_ONLY=$SKIP"
+if [ "$PASS" -eq 0 ] && [ "$SKIP" -gt 0 ]; then
+    echo "[WARN] PASS=0 で RUN_ONLY のみ。.out か validator を用意して実判定にすること。"
+fi
 [ "$FAIL" -eq 0 ]
