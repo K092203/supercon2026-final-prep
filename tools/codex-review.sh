@@ -41,6 +41,6 @@ mkdir -p results/codex
 OUT="results/codex/$(date +%Y%m%d-%H%M%S)-${TAG}.md"
 echo "=== codex exec (read-only) mode=$MODE → $OUT"
 # --sandbox read-only: 検証台として編集させない。進捗は stderr、最終回答のみ stdout。
-codex exec --sandbox read-only "$PROMPT" | tee "$OUT"
+codex exec --sandbox read-only "$PROMPT" </dev/null | tee "$OUT"
 echo ""
 echo ">>> 保存: $OUT  (Claude はこのファイルを読んで二次判断に使える)"
