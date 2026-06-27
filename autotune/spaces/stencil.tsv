@@ -1,8 +1,9 @@
 # stencil の探索空間の例 — 2層モデルとカテゴリ列挙のデモを兼ねる。
 #   bin choice  : リビルド済みバイナリの切り替え(=外側カテゴリ層)。
-#                 stencil_blocked の BT/RB/CB は -D 定数なので「別バイナリ」として扱う。
-#   pad pow2    : リーディング次元パディング (キャッシュセット衝突回避)。
-#   steps int   : 比較を公平にするため通常は固定。ここでは生成のデモとして可変。
+#   pad/steps   : stencil・stencil_blocked とも runtime 引数 --pad/--steps を読むので
+#                 同じ steps/pad で公平に比較できる(以前 blocked は無視していたのを修正済)。
+#   ※ stencil_blocked の BT/RB/CB は -D 定数(リビルド層)。これらを振るには別バイナリ化が必要で、
+#     follow-up の tools/build_variants.sh + autotune/spaces/stencil_blocked.tsv で bin 列に列挙する。
 # 目的関数は min-elapsed 推奨 (ステンシルは速度律速。score はチェックサムで確認用)。
 bin     choice  stencil  stencil_blocked
 pad     pow2    1        16

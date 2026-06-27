@@ -41,8 +41,8 @@
 #define GSTEPS 200
 #endif
 static const int   H = GH, W = GW;
-static const int   STEPS = GSTEPS;
 static const float D = 0.20f, dt = 1.0f;
+// STEPS / PAD は main で runtime 引数(--steps/--pad)として読む(stencil と公平に比較するため)
 #ifndef BUDGET_SEC
 #define BUDGET_SEC 5.0
 #endif
@@ -56,7 +56,6 @@ static const float D = 0.20f, dt = 1.0f;
 #ifndef CB
 #define CB 256        // 列タイル幅
 #endif
-static const int PAD = 8;
 
 // 1 スーパーステップ: a(状態 t) から bt ステップ進めて b(状態 t+bt) を作る。
 // 内部行は local [BT .. BT+lh-1]、内部列は [1 .. W-2]。冗長ハロで通信せず BT 進める。
@@ -151,6 +150,8 @@ int main(int argc, char** argv) {
 #endif
     tune::Args args(argc, argv);
     const double BUDGET = tune::budget(args, BUDGET_SEC); // --budget で実行時上書き (BT/RB/CB は -D=リビルド層)
+    const int STEPS = (int)args.geti("steps", GSTEPS);    // --steps で上書き (stencil と公平比較)
+    const int PAD   = (int)args.geti("pad", 8);           // --pad で上書き
     const int base = H / nranks, rem = H % nranks;
     const int lh = base + (rank < rem ? 1 : 0);
     // lh < BT だと deep-halo 交換が内部行でなく ghost を含み MPI 分割で誤結果。明示停止。
