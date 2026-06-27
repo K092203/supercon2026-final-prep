@@ -198,9 +198,12 @@
     <tr><th>ファイル</th><th>役割</th></tr>
     <tr><td><code>tools/check-mpi.sh</code></td><td>ローカル4ランクで MPI 経路(ハロ交換/Allreduce/MAXLOC)を自動検証(<code>make test-mpi</code>)</td></tr>
     <tr><td><code>tests/judge.sh</code></td><td><code>*.in</code>/<code>*.out</code> を一括正誤判定</td></tr>
-    <tr><td><code>tools/stress.py</code> / <code>benchmark.py</code></td><td>愚直解 vs 高速解の比較 / 速度計測</td></tr>
-    <tr><td><code>scripts/profile.sh</code> / <code>time_omp.sh</code></td><td>gprof/perf プロファイル / スレッド数別ベンチ。<span class="badge b-guess">推測:旧ツール</span> 存在しない <code>src/main.cpp</code> を参照(runner.sh 同様、現構成では未整合)</td></tr>
-    <tr><td><code>tools/runner.sh</code></td><td>ローカル簡易ランナー。<span class="badge b-guess">推測:旧ツール</span> 存在しない <code>src/main.cpp</code> を参照しており現構成では未整合</td></tr>
+    <tr><td><code>tools/stress.py</code> / <code>benchmark.py</code></td><td>愚直解 vs 高速解の比較(<code>exact</code>/<code>valid-only</code>/<code>score-compare</code>) / 速度計測</td></tr>
+    <tr><td><code>tools/gen_small_cases.py</code></td><td>seed 固定の小ケース生成器。<code>gen_case()</code> は stress.py と共有(正本)。naive 比較・validator 検査・境界確認の入口</td></tr>
+    <tr><td><code>tools/validate_output.py</code></td><td>出力の形式/制約検査 + スコア計算の雛形。<code>read_input/parse_output/validate/score</code> の4関数を当日 problem 固有に差し替え</td></tr>
+    <tr><td><code>tools/save_candidate.sh</code></td><td>提出候補(src+結果+git来歴+note)を <code>submissions/</code> に保存(命綱の複製)。<code>fugaku-config.env</code> は保存しない</td></tr>
+    <tr><td><code>scripts/profile.sh</code> / <code>time_omp.sh</code></td><td>gprof/perf プロファイル / スレッド数別ベンチ。<code>[target]</code> 引数化済(既定 <code>contest</code>)</td></tr>
+    <tr><td><code>tools/runner.sh</code></td><td>ローカル簡易ランナー(<code>runner.sh [target] [input] [budget]</code>・既定 <code>contest</code>)</td></tr>
   </table>
 
   <!-- 6 -->
@@ -287,8 +290,7 @@ tools/fugaku-tune.sh configs.tsv 1750 max-score</code></pre>
     <tr><th>課題</th><th>状況 / 補足</th></tr>
     <tr><td>富岳実機で未検証</td><td>リモート系(<code>fugaku-*.sh</code> / <code>make fugaku</code> / PJM出力形式)は構文・ドライランまで。<strong>実機初通しは本選初日</strong> <span class="badge b-guess">推測</span></td></tr>
     <tr><td>ベイズ最適化(GP)未実装</td><td>設計文書は trustbo-gp 接続を構想するが、コードは未着手(任意の付録扱い)<span class="badge b-no">未実装</span></td></tr>
-    <tr><td>正誤判定は課題依存</td><td>テンプレは既定 <code>correct=1</code>。当日 <code>solver_naive</code> 照合等の検証器を配線する必要(未知課題では汎用化不能)</td></tr>
-    <tr><td>一部の補助ツールが旧構成参照</td><td><code>tools/runner.sh</code> 等が存在しない <code>src/main.cpp</code> を参照 <span class="badge b-guess">推測:整理対象</span></td></tr>
+    <tr><td>正誤判定は課題依存</td><td>テンプレは既定 <code>correct=1</code>。当日 <code>solver_naive</code> 照合(<code>stress.py</code>)や <code>validate_output.py</code> を problem 固有に配線する必要(未知課題では汎用化不能)</td></tr>
     <tr><td>空のドキュメント</td><td><code>docs/decisions.md</code> は中身なし(<code>wc -l</code> で1行未満)<span class="badge b-ok">確認済</span></td></tr>
     <tr><td>運用前提が未確定</td><td>実行時間制限(<code>BUDGET_SEC</code> の実値)・大会レギュレーション(AI/持込可否)は当日確認 <span class="badge b-guess">推測</span></td></tr>
   </table>
