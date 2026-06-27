@@ -9,3 +9,6 @@ results/tune/*
 state/*
 !state/.gitkeep
 tools/fugaku-config.env
+# Python キャッシュ (day1-smoke の py_compile 等で生成)
+__pycache__/
+*.pyc
