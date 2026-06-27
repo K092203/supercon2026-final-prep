@@ -13,7 +13,7 @@
 | ノード構成 | 1ノード = 48コア = 4CMG × 12コア |
 | メモリ帯域 | HBM2 〜1 TB/s |
 | SIMD幅 | SVE 512bit（float 16レーン、double 8レーン） |
-| 富士通コンパイラ | `mpiFCC -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512` |
+| 富士通コンパイラ | `mpiFCCpx -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512`（ログインノードのクロスコンパイラ。計算ノードは `mpiFCC`） |
 | 推奨実行構成 | `#PJM --mpi "max-proc-per-node=4"`（1ランク=1CMG固定）+ `OMP_NUM_THREADS=12 OMP_PROC_BIND=close OMP_PLACES=cores` |
 | 競技時間 | ⚠️ **未確定**。`BUDGET_SEC=1750`（30分想定）は仮の値。**本選初日に実際の実行時間制限を確認して上書きする**こと |
 
@@ -46,7 +46,7 @@ make stencil-blocked && ./build/stencil_blocked   # 温度ブロッキング版 
 #   要 OpenMPI: sudo apt-get install -y openmpi-bin libopenmpi-dev
 make test-mpi   # ハロ交換 / MPI_Allreduce / MAXLOC+Bcast を自動 PASS/FAIL 判定
 
-# 富岳提出用ビルド (mpiFCC / USE_MPI / SVE)
+# 富岳提出用ビルド (mpiFCCpx / USE_MPI / SVE)
 make fugaku
 
 # クリーン

@@ -21,6 +21,12 @@ while true; do
   TIMESTAMP=$(date '+%H:%M:%S')
   echo "[$TIMESTAMP] JOBID=$JOBID STATUS=$STATUS"
 
+  # 待ち行列中は「なぜ QUEUED か」を保存 (AI が読む。read-only・低リスク)
+  case "$STATUS" in
+    QUEUED|HOLD|UNKNOWN)
+      ssh "$FUGAKU_HOST" "pjstat -v $JOBID" > "$ROOT/results/.last-jobinfo" 2>/dev/null || true ;;
+  esac
+
   case "$STATUS" in
     COMPLETED)
       echo "COMPLETED" > "$ROOT/results/.last-status"

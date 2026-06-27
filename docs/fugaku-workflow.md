@@ -39,6 +39,22 @@ cp tools/fugaku-config.env.template tools/fugaku-config.env
 tools/fugaku-sync.sh 5
 ```
 
+## 富岳環境/最適化ノブ (tools/fugaku-config.env)
+
+公式コマンド準拠の opt-in 設定。**空のままなら現状の挙動(ゼロ回帰)**。Day1 に実機確認して値を埋める。
+
+| 変数 | 用途 | 例 / 既定 |
+|---|---|---|
+| `FUGAKU_CXX` | ログインノードのMPI C++クロスコンパイラ | `mpiFCCpx`(計算ノードは `mpiFCC`) |
+| `FUGAKU_MODULES` | `module load` する一覧 | `"lang/tcsds-1.2.41"` / 空=しない |
+| `FUGAKU_LLIO_VOL` | `#PJM -x PJM_LLIO_GFSCACHE=` | `/vol0004` / 空=指定なし |
+| `FUGAKU_FREQ` | `#PJM -L freq=`(速度・boost) | `2200` / 空=既定2000 |
+| `FUGAKU_THROTTLING` | `#PJM -L throttling_state=`(HBMスロットル) | `0`=解除 / 空=既定 |
+| `FUGAKU_SPATH` | `#PJM --spath`(PJM -S 統計の出力先) | `results/%j` / 空=出さない |
+
+> ⚠️ Day1必須確認: ① `mpiFCCpx` で `make fugaku` が通るか ② `module` 名 ③ LLIO volume 名。
+> `module` は非対話 ssh で未定義の場合があるため、ビルドが「コマンドなし」で失敗したら要調整。
+
 ## 開発ループ
 
 ```bash
@@ -140,7 +156,8 @@ final-prep/
 │   ├── fugaku-wait.sh
 │   ├── fugaku-fetch.sh
 │   ├── fugaku-run.sh   ← 単発デバッグはこれ
-│   └── fugaku-tune.sh  ← バッチ掃引 (1ジョブでN構成。詳細 docs/autotune.md)
+│   ├── fugaku-tune.sh  ← バッチ掃引 (1ジョブでN構成。詳細 docs/autotune.md)
+│   └── fugaku-cancel.sh← ジョブ削除 (pjdel。暴走/ミスジョブ即停止)
 └── docs/
     ├── fugaku-ssh-template.txt
     ├── fugaku-workflow.md  (このファイル)

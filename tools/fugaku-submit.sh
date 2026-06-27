@@ -14,6 +14,13 @@ BUDGET_SEC="${2:-${BUDGET_SEC:-1750}}"
 GIT_COMMIT=$(cd "$REPO_ROOT" && git rev-parse --short HEAD 2>/dev/null || echo nogit)
 GIT_DIRTY=$(cd "$REPO_ROOT" && git status --short 2>/dev/null | wc -l | tr -d ' ')
 
+# opt-in な PJM ノブ / module (config 未設定なら空文字 → 生成ジョブは現状と一致=ゼロ回帰)
+PJM_LLIO="";  [ -n "${FUGAKU_LLIO_VOL:-}" ]    && PJM_LLIO="#PJM -x PJM_LLIO_GFSCACHE=${FUGAKU_LLIO_VOL}"
+PJM_FREQ="";  [ -n "${FUGAKU_FREQ:-}" ]        && PJM_FREQ="#PJM -L \"freq=${FUGAKU_FREQ}\""
+PJM_THR="";   [ -n "${FUGAKU_THROTTLING:-}" ]  && PJM_THR="#PJM -L \"throttling_state=${FUGAKU_THROTTLING}\""
+PJM_SPATH=""; [ -n "${FUGAKU_SPATH:-}" ]       && PJM_SPATH="#PJM --spath \"${FUGAKU_SPATH}\""
+MODLOAD_JOB="";[ -n "${FUGAKU_MODULES:-}" ]    && MODLOAD_JOB="module load ${FUGAKU_MODULES}"
+
 # ジョブスクリプトを動的生成 (pjsub ディレクティブは変数展開不可のためここで埋め込む)
 JOB_SCRIPT=$(cat << ENDJOB
 #!/bin/bash
@@ -24,6 +31,10 @@ JOB_SCRIPT=$(cat << ENDJOB
 #PJM -g ${FUGAKU_GROUP}
 #PJM -j
 #PJM -S
+${PJM_LLIO}
+${PJM_FREQ}
+${PJM_THR}
+${PJM_SPATH}
 
 # 1 ランク = 1 CMG (12 コア) に固定。これがないと 4 ランクが CMG をまたいで配置され、
 # first-touch で確保した CMG ローカル HBM への局所性が崩れて帯域が出ない。
@@ -41,6 +52,7 @@ echo "target=${TARGET} budget=${BUDGET_SEC} ranks=${FUGAKU_MPI_RANKS} threads=${
 echo "commit=${GIT_COMMIT} dirty=${GIT_DIRTY}" >> "\${RESULTS}/meta.txt"
 date -u +%Y-%m-%dT%H:%M:%SZ >> "\${RESULTS}/meta.txt"
 
+${MODLOAD_JOB}
 # 資源計測: /usr/bin/time の -v -o が実際に動く時だけラップする。
 #   存在チェックだけでは BSD time 等で -v 不明 → ラップ失敗 → ソルバ未実行で本番ジョブが死ぬ。
 #   probe (true で試す) に通った時だけ採用。ダメなら素通り=本計算を絶対に壊さない。
