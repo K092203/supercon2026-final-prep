@@ -83,6 +83,9 @@ tools/gen_configs.py autotune/spaces/search.tsv --n 12 --method lhs \
 
 tools/fugaku-tune.sh configs.tsv <BUDGET_SEC> max-score
 #   sync→送付→tune.pjm 投入→wait→results.csv 回収→incumbent 更新 まで自動
+#   ⚠️ solver が stdin から問題入力を読む課題は第4引数で input を渡す(全構成へ同じ入力):
+#       tools/fugaku-tune.sh configs.tsv <BUDGET_SEC> max-score tests/sample_01.in
+#       省略すると /dev/null 掃引になり score=0 の誤測定になる。
 ```
 
 ---

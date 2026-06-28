@@ -133,6 +133,8 @@ tools/fugaku-run.sh stencil 1750
 tools/gen_configs.py autotune/spaces/search.tsv --n 12 \
     --target search --bin search --ranks 4 --omp 12 --rep 3 > configs.tsv
 # 富岳で N 構成を 1 ジョブ掃引 → state/incumbent.json 更新
+#   stdin 入力を読む課題は第4引数で input を渡す（省略すると /dev/null 掃引で誤測定）:
+#   tools/fugaku-tune.sh configs.tsv <BUDGET_SEC> max-score tests/sample_01.in
 tools/fugaku-tune.sh configs.tsv <BUDGET_SEC> max-score
 # ローカル予行演習（実機前に全経路を検証。過剰サブスクライブ回避で omp は小さく）
 tools/gen_configs.py autotune/spaces/search.tsv --n 6 --ranks 2 --omp 2 --rep 1 > /tmp/c.tsv
