@@ -39,7 +39,8 @@ if [ -f tests/sample_01.in ] && [ -f tests/sample_01.out ]; then
 else
   echo "[SKIP] tests/sample_01.{in,out} なし"
 fi
-# gen_small_cases: 同 seed で2回生成して決定的か
+# gen_small_cases: 同 seed で2回生成して決定的か (前回残骸があると上書き防止で失敗するため先に掃除)
+rm -rf /tmp/d1_g1 /tmp/d1_g2 2>/dev/null || true
 if python3 tools/gen_small_cases.py --seed 1 --count 3 --out /tmp/d1_g1 >/dev/null 2>&1 \
    && python3 tools/gen_small_cases.py --seed 1 --count 3 --out /tmp/d1_g2 >/dev/null 2>&1 \
    && diff -rq /tmp/d1_g1 /tmp/d1_g2 >/dev/null 2>&1; then
