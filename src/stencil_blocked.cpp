@@ -18,7 +18,7 @@
 // ⚠️ BT=1 にすると plain stencil と同じ動作 (回帰確認用)。
 //
 // 正しさ: 各内部セルは plain と同一の式・同一の入力で STEPS 回更新されるため
-//         結果は plain と一致する (make test-blocked で sum 一致を自動確認)。
+//         結果は plain と一致する (make test-mpi の [2/4] で plain と一致を自動確認 (tools/check-mpi.sh))。
 // =====================================================================
 #include "common.hpp"
 #include "tune_args.hpp"

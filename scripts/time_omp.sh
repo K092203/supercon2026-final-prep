@@ -16,11 +16,12 @@ cd "$ROOT"
 [ -f "src/$TARGET.cpp" ] || { echo "ERROR: src/$TARGET.cpp が無い (target=$TARGET)"; exit 1; }
 
 mkdir -p build
+BIN="build/${TARGET}_bench"
 
 echo "[time_omp] Building src/$TARGET.cpp (BUDGET_SEC=$BUDGET, -O2) ..."
 g++ -std=c++17 -O2 -fopenmp -Isrc \
     -DBUDGET_SEC="$BUDGET" \
-    "src/$TARGET.cpp" -o build/contest_bench
+    "src/$TARGET.cpp" -o "$BIN"
 
 echo ""
 printf "%-12s  %-12s  %-20s\n" "OMP_THREADS" "Elapsed(s)" "Stderr"
@@ -31,7 +32,7 @@ for NTH in $THREADS; do
     STDERR=$(OMP_NUM_THREADS="$NTH" \
              OMP_PROC_BIND=close \
              OMP_PLACES=cores \
-             ./build/contest_bench < "$INPUT" 2>&1 1>/dev/null)
+             "$BIN" < "$INPUT" 2>&1 1>/dev/null)
     END=$(date +%s%N 2>/dev/null || echo 0)
     if [ "$START" != "0" ] && [ "$END" != "0" ]; then
         ELAPSED=$(awk "BEGIN{printf \"%.3f\", ($END-$START)/1e9}")

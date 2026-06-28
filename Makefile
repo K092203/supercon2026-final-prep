@@ -109,10 +109,10 @@ naive:
 	mkdir -p build
 	$(CXX_LOCAL) $(FLAGS_LOCAL) src/solver_naive.cpp -o build/naive
 
-run: test-skeleton
+run: test-contest
 
 # 注意: test / stress は課題確定後に gen_case() と solver を実装してから使う。
-# 現状の build/fast (skeleton) は stdin を無視するため有意なテストにならない。
+# build/fast は既定 contest。FAST_TARGET=skeleton にした場合は stdin を無視するため有意なテストにならない。
 test: fast
 	./build/fast < cases/sample.in
 
