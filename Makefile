@@ -1,7 +1,7 @@
 # =====================================================================
 # SuperCon2026 final-prep — Makefile
 #   ローカル (g++): make          → build/{skeleton,stencil,stencil_blocked,search}
-#   富岳(mpiFCCpx): make fugaku   → build/fugaku/{skeleton,stencil,stencil_blocked,search}
+#   富岳(mpiFCCpx): make fugaku   → build/fugaku/{skeleton,stencil,stencil_blocked,search,contest}
 #   掃引リハ      : make tune-local CONFIGS=<configs.tsv>  (詳細 docs/autotune.md)
 # =====================================================================
 

@@ -71,7 +71,9 @@ python3 tools/stress.py --fast ./build/fast --naive ./build/naive --mode exact -
 - [ ] `tools/fugaku-run.sh contest <BUDGET_SEC> <input>` で初回投入 → `results/latest` 確認
 - [ ] valid を確認したら **即** `tools/save_candidate.sh stable results/latest "Day1 first valid"`
 
-> 「いつ落ちても提出できる現時点ベスト」を常に `submissions/` と `state/incumbent.json` に残す。
+> 「いつ落ちても提出できる現時点ベスト」を切らさない。手動の単発提出は `save_candidate.sh` で
+> `submissions/` に保存、オートチューン経由のベストは `update_incumbent.py` が `state/incumbent.json` を更新
+> （= 別々の仕組み。save_candidate は incumbent を触らない）。
 
 ---
 
@@ -81,7 +83,7 @@ python3 tools/stress.py --fast ./build/fast --naive ./build/naive --mode exact -
 |---|---|
 | ジョブが結果を残さない | `results/<jobid>/status.txt`（無ければ PJM kill＝予算/elapse 超過を疑う） |
 | 実行時エラー | `stderr.txt` / `exit_code.txt` |
-| ビルド失敗 | `build.log` |
+| ビルド失敗 | 投入前は `results/last-build.log`（ジョブが出ない）／回収後はジョブ別 `results/<jobid>/build.log` |
 | どのコードの結果か不明 | `meta.json`（commit/dirty/input_sha256） |
 | 直近ジョブID | `results/.last-jobid` |
 
