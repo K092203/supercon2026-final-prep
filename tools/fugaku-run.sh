@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # WSL2↔富岳 開発ループ ワンショット実行
 # 使い方: tools/fugaku-run.sh <target> [budget_sec]
-#   target:     skeleton | stencil | search
+#   target:     skeleton | stencil | stencil-blocked | search | contest
 #   budget_sec: 時間予算 (秒)。デフォルト 1750 (本選 30分=1800 - 50秒マージン。値は当日確認)
 #
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

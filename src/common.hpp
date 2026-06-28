@@ -8,7 +8,7 @@
 #endif
 
 // wall-clock 秒。MPI 有効時は MPI_Wtime、それ以外は steady_clock を使う。
-// parallel_search.cpp の clock() 問題を回避するため全ファイルこれに統一する。
+// search.cpp(旧 parallel_search.cpp) の clock() 問題を回避するため全ファイルこれに統一する。
 static inline double wtime() {
 #ifdef USE_MPI
     return MPI_Wtime();

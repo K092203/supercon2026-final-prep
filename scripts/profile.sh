@@ -12,37 +12,41 @@ cd "$ROOT"
 [ -f "src/$TARGET.cpp" ] || { echo "ERROR: src/$TARGET.cpp が無い (target=$TARGET)"; exit 1; }
 
 mkdir -p build/prof
+BIN_PREFIX="build/prof/${TARGET}"
 
 case "$METHOD" in
   gprof)
+    BIN="${BIN_PREFIX}_pg"
     echo "[profile] Building with -pg ..."
     g++ -std=c++17 -O2 -fopenmp -pg -Isrc \
-        "src/$TARGET.cpp" -o build/prof/contest_pg
+        "src/$TARGET.cpp" -o "$BIN"
     echo "[profile] Running ..."
-    OMP_NUM_THREADS=1 ./build/prof/contest_pg < "$INPUT" > /dev/null 2>&1 || true
-    gprof build/prof/contest_pg gmon.out > build/prof/gprof_report.txt
+    OMP_NUM_THREADS=1 "$BIN" < "$INPUT" > /dev/null 2>&1 || true
+    gprof "$BIN" gmon.out > build/prof/gprof_report.txt
     echo "[profile] Report: build/prof/gprof_report.txt"
     head -40 build/prof/gprof_report.txt
     ;;
 
   perf)
+    BIN="${BIN_PREFIX}_perf"
     echo "[profile] Building with -g -fno-omit-frame-pointer ..."
     g++ -std=c++17 -O2 -fopenmp -g -fno-omit-frame-pointer -Isrc \
-        "src/$TARGET.cpp" -o build/prof/contest_perf
+        "src/$TARGET.cpp" -o "$BIN"
     echo "[profile] Running with perf stat ..."
     OMP_NUM_THREADS="$(nproc)" \
     perf stat -e cache-misses,cache-references,instructions,cycles,branch-misses \
-        ./build/prof/contest_perf < "$INPUT" > /dev/null 2>&1
+        "$BIN" < "$INPUT" > /dev/null 2>&1
     ;;
 
   valgrind)
+    BIN="${BIN_PREFIX}_vg"
     echo "[profile] Building with -g -O1 ..."
     g++ -std=c++17 -O1 -fopenmp -g -Isrc \
-        "src/$TARGET.cpp" -o build/prof/contest_vg
+        "src/$TARGET.cpp" -o "$BIN"
     echo "[profile] Running with callgrind (OMP_NUM_THREADS=1) ..."
     OMP_NUM_THREADS=1 \
     valgrind --tool=callgrind --callgrind-out-file=build/prof/callgrind.out \
-        ./build/prof/contest_vg < "$INPUT" > /dev/null 2>&1
+        "$BIN" < "$INPUT" > /dev/null 2>&1
     echo "[profile] Report: build/prof/callgrind.out"
     echo "          Visualize with: kcachegrind build/prof/callgrind.out"
     ;;

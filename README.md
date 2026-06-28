@@ -236,6 +236,7 @@ final-prep/
 ├── docs/
 │   ├── fugaku-workflow.md  # 富岳インフラ詳細設計
 │   ├── fugaku-ssh-template.txt
+│   ├── ai_context.md       # AI エージェント言語ルール
 │   ├── design-rebuild.md   # 設計思想: C++テンプレート (なぜ)
 │   ├── design-infra.md     # 設計思想: インフラ/ハーネス/全体 (なぜ。テンプレ以外)
 │   ├── day1-checklist.md   # 課題公開〜30分の1枚 (仕様読取り + 検証ループ配線 + 失敗時確認)
