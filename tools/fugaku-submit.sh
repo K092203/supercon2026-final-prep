@@ -7,6 +7,33 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/fugaku-config.env"
 
+# --- 設定値の検証: remote shell へ素で埋め込む値に空白/シェルメタ文字があれば停止 ---
+#   fugaku-config.env は自分で書くファイルだが、空白入りパスや誤記が remote ジョブを壊す/
+#   意図しないコマンドを生むのを fail-closed で防ぐ (エスケープより安全側)。
+_cfg_safe() {   # 識別子・パス用: 英数 . _ / : @ - のみ許可
+    local name="$1" val="${2-}"
+    [ -n "$val" ] || { echo "ERROR: $name が未設定 (tools/fugaku-config.env)" >&2; exit 2; }
+    case "$val" in *[!A-Za-z0-9._/:@-]*)
+        echo "ERROR: $name に使用不可文字: '$val' (英数 . _ / : @ - のみ)" >&2; exit 2 ;; esac
+}
+_cfg_int() {    # 正の整数用
+    local name="$1" val="${2-}"
+    case "$val" in ''|*[!0-9]*)
+        echo "ERROR: $name は正の整数で指定: '$val'" >&2; exit 2 ;; esac
+}
+_cfg_safe FUGAKU_HOST        "${FUGAKU_HOST-}"
+_cfg_safe FUGAKU_REMOTE_DIR  "${FUGAKU_REMOTE_DIR-}"
+_cfg_safe FUGAKU_RSCGRP      "${FUGAKU_RSCGRP-}"
+_cfg_safe FUGAKU_GROUP       "${FUGAKU_GROUP-}"
+_cfg_int  FUGAKU_NODE_COUNT  "${FUGAKU_NODE_COUNT-}"
+_cfg_int  FUGAKU_MPI_RANKS   "${FUGAKU_MPI_RANKS-}"
+_cfg_int  FUGAKU_OMP_THREADS "${FUGAKU_OMP_THREADS-}"
+# FUGAKU_MODULES は空白区切りの module 名を許容するが、コマンド注入文字は禁止
+if [ -n "${FUGAKU_MODULES:-}" ]; then
+    case "$FUGAKU_MODULES" in *[\;\&\|\$\`\(\)\<\>]*)
+        echo "ERROR: FUGAKU_MODULES にシェルメタ文字: '$FUGAKU_MODULES'" >&2; exit 2 ;; esac
+fi
+
 TARGET="${1:-skeleton}"
 BUDGET_SEC="${2:-${BUDGET_SEC:-1750}}"
 INPUT="${3:-}"
@@ -66,14 +93,15 @@ check_budget_elapse() {
 
 check_budget_elapse "$BUDGET_SEC" "${FUGAKU_ELAPSE:-}" "$FUGAKU_ELAPSE_MARGIN_SEC"
 
-# 実入力ファイルを remote の固定パスへ送る (JOBID は submit 後にしか分からないため
-# inputs/current.dat に置き、ジョブ側で stdin にリダイレクト + 結果へ複製する)。
+# 実入力ファイルを remote へ送る (JOBID は submit 後にしか分からないため、invocation 一意名で置く)。
+# 固定名だと並行投入で後続ジョブが入力を上書きするため、timestamp+PID で衝突回避。
 REMOTE_INPUT="/dev/null"
 if [ -n "$INPUT" ]; then
     [ -f "$INPUT" ] || { echo "ERROR: input not found: $INPUT" >&2; exit 1; }
+    STAMP="$(date +%Y%m%d%H%M%S)_$$"
     ssh "$FUGAKU_HOST" "mkdir -p $FUGAKU_REMOTE_DIR/inputs" >&2
-    rsync -azq "$INPUT" "$FUGAKU_HOST:$FUGAKU_REMOTE_DIR/inputs/current.dat" >&2
-    REMOTE_INPUT="$FUGAKU_REMOTE_DIR/inputs/current.dat"
+    rsync -azq "$INPUT" "$FUGAKU_HOST:$FUGAKU_REMOTE_DIR/inputs/in_${STAMP}.dat" >&2
+    REMOTE_INPUT="$FUGAKU_REMOTE_DIR/inputs/in_${STAMP}.dat"
 fi
 
 # ソース来歴 (WSL 側で取得 → meta に埋め、結果がどのコードのものか AI が相関できる)
