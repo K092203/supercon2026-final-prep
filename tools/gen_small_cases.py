@@ -14,6 +14,7 @@
 #   依存: Python 標準ライブラリのみ。
 # =====================================================================
 import argparse
+import glob
 import os
 import random
 import sys
@@ -46,6 +47,7 @@ def main():
     ap.add_argument("--out", default="tests/generated", help="出力ディレクトリ")
     ap.add_argument("--corners", action="store_true", help="境界ケースも出力する")
     ap.add_argument("--single", action="store_true", help="1 ケースを stdout に出して終了")
+    ap.add_argument("--force", action="store_true", help="同 seed の既存ケースがあっても上書きする")
     a = ap.parse_args()
 
     rng = random.Random(a.seed)
@@ -55,6 +57,11 @@ def main():
         return
 
     os.makedirs(a.out, exist_ok=True)
+    # 同 seed の既存ケースを無言上書きしない (再現ログと入力がずれる事故を防ぐ)。
+    existing = glob.glob(os.path.join(a.out, f"seed{a.seed:06d}_*.in"))
+    if existing and not a.force:
+        sys.exit(f"[gen_small_cases] {a.out}/ に seed={a.seed} のケースが {len(existing)} 件既存。"
+                 f" 上書きするなら --force、別にするなら --out か --seed を変更してください。")
     written = 0
 
     if a.corners:
