@@ -45,25 +45,29 @@ def run(cmd, inp, timeout):
     return 0, res.stdout.decode().strip()
 
 
-def run_validator(validator, inp, out):
-    """validator を (input, output) で実行。(ok, score, msg) を返す。
-    ok=True なら valid。score は stdout の 'score=' から抽出 (無ければ None)。"""
+TEMPLATE_RC = 3   # validate_output.py が「雛形のまま(--strict)」で返す終了コード
+
+
+def run_validator(validator, inp, out, strict=False):
+    """validator を (input, output) で実行。(ok, score, msg, rc) を返す。
+    ok=True なら valid。score は stdout の 'score=' から抽出 (無ければ None)。
+    strict=True なら validator に --strict を渡す (未カスタマイズ validator は rc=3)。"""
     with tempfile.NamedTemporaryFile("w", suffix=".in", delete=False) as fi:
         fi.write(inp); in_path = fi.name
     with tempfile.NamedTemporaryFile("w", suffix=".out", delete=False) as fo:
         fo.write(out + "\n"); out_path = fo.name
     try:
-        res = subprocess.run(
-            [sys.executable, validator, in_path, out_path],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
+        cmd = [sys.executable, validator, in_path, out_path]
+        if strict:
+            cmd.append("--strict")
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         score = None
         for tok in res.stdout.decode().split():
             if tok.startswith("score="):
                 score = tok[len("score="):]
         ok = (res.returncode == 0)
         msg = res.stderr.decode().strip() if not ok else ""
-        return ok, score, msg
+        return ok, score, msg, res.returncode
     finally:
         os.unlink(in_path)
         os.unlink(out_path)
@@ -86,10 +90,25 @@ def main():
     ap.add_argument("--cases", type=int, default=10000)
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--timeout", type=float, default=2.0)
+    ap.add_argument("--lenient-validator", action="store_true",
+                    help="validator に --strict を渡さない(未カスタマイズの雛形 validator でも形式チェックのみで通す)")
     a = ap.parse_args()
 
     if a.mode in ("valid-only", "score-compare") and not a.validator:
         ap.error(f"--mode {a.mode} には --validator が必要")
+
+    # validator を使うモードは既定で strict (未カスタマイズの雛形 validator を弾く)。
+    # 雛形のまま valid-only を回すと「形式OK」を valid と誤認するため、起動時に rc=3 を1回検出して止める。
+    # (rc=3 は雛形固有。カスタム済み validator はダミー出力に対し 0/1 を返すので誤検出しない)
+    strict = not a.lenient_validator
+    if a.validator and strict and a.mode in ("valid-only", "score-compare"):
+        _, _, _, rc = run_validator(a.validator, "0\n", "0", strict=True)
+        if rc == TEMPLATE_RC:
+            print("ERROR: validator が未カスタマイズ(雛形)です。valid-only/score-compare は形式チェックのみで誤認します。",
+                  file=sys.stderr)
+            print("       validate_output.py を problem 固有に実装し CUSTOMIZED=True にするか、"
+                  "形式チェックのみで良ければ --lenient-validator を付けてください。", file=sys.stderr)
+            sys.exit(2)
 
     rng = random.Random(a.seed)
     for t in range(a.cases):
@@ -111,7 +130,7 @@ def main():
                 sys.exit(1)
 
         elif a.mode == "valid-only":
-            ok, score, msg = run_validator(a.validator, inp, out_fast)
+            ok, score, msg, _ = run_validator(a.validator, inp, out_fast, strict=strict)
             if not ok:
                 dump(t, inp, fast=out_fast); print(f"INVALID: {msg}")
                 sys.exit(1)
@@ -121,8 +140,8 @@ def main():
             if rc_naive != 0:
                 dump(t, inp, naive=out_naive); print(f"naive crash/timeout (rc={rc_naive})")
                 sys.exit(1)
-            ok_f, sc_f, msg_f = run_validator(a.validator, inp, out_fast)
-            ok_n, sc_n, _ = run_validator(a.validator, inp, out_naive)
+            ok_f, sc_f, msg_f, _ = run_validator(a.validator, inp, out_fast, strict=strict)
+            ok_n, sc_n, _, _ = run_validator(a.validator, inp, out_naive, strict=strict)
             if not ok_f:
                 dump(t, inp, fast=out_fast); print(f"fast INVALID: {msg_f}")
                 sys.exit(1)
