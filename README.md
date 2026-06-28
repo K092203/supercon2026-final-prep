@@ -181,7 +181,8 @@ tools/fugaku-run.sh stencil <BUDGET_SEC>
 > **注意**: `src/main.cpp` は存在しない。テンプレートを直接編集する。  
 > 各テンプレ冒頭の `🎯 当日の手順` に「どこを触るか・何を忘れないか」を集約済み。  
 > I/O 配線は `src/contest.cpp`（fastio の読む→解く→書く雛形）で実証済み。  
-> `make test-contest`、または `make contest && bash tests/judge.sh tests` で一括判定（`*.in`/`*.out` を足す）。  
+> `make test-contest` は sample_01 を実行して出力を目視するだけ。期待出力との**一括判定**は
+> `make contest && bash tests/judge.sh tests`（`*.in`/`*.out` を足す）。  
 > 検証ループ: `gen_small_cases.py` で小ケース生成 → `solver_naive.cpp` を参照解にして `stress.py`
 > （`--mode exact`/`valid-only`/`score-compare`）で照合 → valid なら `save_candidate.sh` で候補保存。
 > 各ツールは当日に課題固有ロジックを差し込む雛形（詳細 [docs/day1-checklist.md](docs/day1-checklist.md)）。
