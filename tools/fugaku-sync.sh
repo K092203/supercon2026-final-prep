@@ -12,6 +12,7 @@ if [ ! -f "$CONFIG" ]; then
   exit 1
 fi
 source "$CONFIG"
+source "$SCRIPT_DIR/fugaku-validate.sh"   # config 値の fail-closed 検証 (remote へ流す前に)
 
 BUDGET_SEC="${1:-${BUDGET_SEC:-1750}}"
 

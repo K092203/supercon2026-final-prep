@@ -16,6 +16,10 @@
 #PJM -g __GROUP__
 #PJM -j
 #PJM -S
+__PJM_LLIO__
+__PJM_FREQ__
+__PJM_THR__
+__PJM_SPATH__
 
 cd "__REMOTE_DIR__" || exit 1
 ROUND="__ROUND__"
@@ -25,6 +29,7 @@ mkdir -p "${RDIR}"
 echo "tune round=${ROUND} budget=__BUDGET__ elapse_sec=__ELAPSE_SEC__" > "${RDIR}/meta.txt"
 date -u +%Y-%m-%dT%H:%M:%SZ >> "${RDIR}/meta.txt"
 
+__MODLOAD__
 # 測定ループ: launcher=mpiexec / bindir=build/fugaku / 入力=__INPUT__ (無ければ /dev/null)
 SWEEP_RC=0
 bash tools/tune-sweep.sh \
