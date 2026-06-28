@@ -41,14 +41,23 @@ mkdir -p "$DEST"
 cp -r src "$DEST/src"
 # 万一 src/ 配下に秘密ファイルが紛れていたら候補から除外する (誤って提出物へ含めない)。
 SECRET_GLOBS=('*.env' '*.pem' '*.key' '*.p12' '*.pfx' '*secret*' '*credential*' 'id_rsa*' '*.token')
+# ディレクトリ名で秘密を示すパス (例 src/secrets/config.txt は普通名でも中身が秘密)
+SECRET_PATHS=('*/secret*/*' '*/secrets/*' '*/credential*/*' '*/private/*' '*/.ssh/*' '*/.env.d/*')
 EXCLUDED=()
 for g in "${SECRET_GLOBS[@]}"; do
     while IFS= read -r -d '' hit; do
         rm -f "$hit"; EXCLUDED+=("${hit#"$DEST/"}")
     done < <(find "$DEST/src" -type f -iname "$g" -print0 2>/dev/null)
 done
+for p in "${SECRET_PATHS[@]}"; do
+    while IFS= read -r -d '' hit; do
+        rm -f "$hit"; EXCLUDED+=("${hit#"$DEST/"}")
+    done < <(find "$DEST/src" -type f -ipath "$p" -print0 2>/dev/null)
+done
 if [ "${#EXCLUDED[@]}" -gt 0 ]; then
-    echo "WARNING: 秘密と思われるファイルを候補から除外しました: ${EXCLUDED[*]}" >&2
+    # 重複を畳んで一覧表示
+    UNIQ="$(printf '%s\n' "${EXCLUDED[@]}" | sort -u | tr '\n' ' ')"
+    echo "WARNING: 秘密と思われるファイル/パスを候補から除外しました: ${UNIQ}" >&2
 fi
 
 # ---- 2) 実行結果スナップショット (あるものだけ) ----
