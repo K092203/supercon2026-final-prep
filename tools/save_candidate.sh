@@ -39,6 +39,17 @@ mkdir -p "$DEST"
 # ---- 1) ソース一式 (当日の提出物そのもの) ----
 #   fugaku-config.env を誤って含めないため src/ だけをコピー (tools/ は来歴で代替)。
 cp -r src "$DEST/src"
+# 万一 src/ 配下に秘密ファイルが紛れていたら候補から除外する (誤って提出物へ含めない)。
+SECRET_GLOBS=('*.env' '*.pem' '*.key' '*.p12' '*.pfx' '*secret*' '*credential*' 'id_rsa*' '*.token')
+EXCLUDED=()
+for g in "${SECRET_GLOBS[@]}"; do
+    while IFS= read -r -d '' hit; do
+        rm -f "$hit"; EXCLUDED+=("${hit#"$DEST/"}")
+    done < <(find "$DEST/src" -type f -iname "$g" -print0 2>/dev/null)
+done
+if [ "${#EXCLUDED[@]}" -gt 0 ]; then
+    echo "WARNING: 秘密と思われるファイルを候補から除外しました: ${EXCLUDED[*]}" >&2
+fi
 
 # ---- 2) 実行結果スナップショット (あるものだけ) ----
 if [ -d "$RESULTS_DIR" ]; then
@@ -53,6 +64,10 @@ fi
 git rev-parse HEAD            > "$DEST/git.commit" 2>/dev/null || echo nogit > "$DEST/git.commit"
 git status --short            > "$DEST/git.status" 2>/dev/null || true
 git diff                      > "$DEST/git.diff"   2>/dev/null || true
+# git.diff に秘密らしき文字列が入っていないか軽く点検し、入っていれば警告 (削除は手動判断)。
+if grep -Eiq 'PRIVATE KEY|password|passwd|secret|api[_-]?key|FUGAKU_(USER|GROUP|HOST)=' "$DEST/git.diff" 2>/dev/null; then
+    echo "WARNING: $DEST/git.diff に秘密らしき文字列を検出。中身を確認し、不要なら削除してください。" >&2
+fi
 
 # ---- 4) note.md (ラベル・時刻・score・input hash・理由) ----
 SCORE="$(grep -o '"score":[^,}]*' "$DEST/meta.json" 2>/dev/null | head -1 || true)"
