@@ -56,6 +56,13 @@ python3 tools/gen_small_cases.py --seed 1 --corners --out tests/generated
 python3 tools/stress.py --fast ./build/fast --naive ./build/naive --mode exact --cases 1000 --seed 1
 ```
 
+> **当日に足す（今は雛形＝最低限の汎用チェックのみ）**:
+> - `validate_output.py`: `validate()`/`score()` を実装し `CUSTOMIZED=True` に。実装前は valid 判定が
+>   「形式OK」止まりなので、検証ループで使うなら `--strict`（未実装なら exit 3）で弾く。
+> - `stress.py --mode score-compare`: 既定はスコア差を表示するだけで fail しない。良否方向が決まったら
+>   「悪化したら fail」をこのモードに足す（最大化/最小化は課題依存）。
+> - `gen_small_cases.py`: 同 seed 既存ケースは上書きされない。撒き直すなら `--force`。
+
 ---
 
 ## 4. 富岳初回 run と候補保存
