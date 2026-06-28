@@ -1,7 +1,7 @@
 # SuperCon2026 富岳向け準備キット 詳細レポート
 
 - 生成日: 2026-06-28
-- 対象 commit: `06e46c3abc81d632530c67413e59bc7835a61151`
+- 対象 commit: `94a4baeda3003a45c2e96eb1123d27504fd55c15`（`fix/eval-findings` の作業ツリー変更を含む現状）
 - 対象ツリー: `/home/kotaro/dev/supercon2026/final-prep`
 - 調査方針: 実在する `README.md`、`docs/`、`src/`、`tools/`、`jobs/`、`Makefile`、`.github/workflows/ci.yml` を読んで裏取りした。未確定事項は「未確定」または「推測」と明記する。
 
@@ -34,7 +34,7 @@ tools/fugaku-run.sh contest <BUDGET_SEC> tests/sample_01.in
 
 富岳に API key、`node_modules`、PyTorch などを持ち込まない方針で、富岳は「コンパイル済み C++ を走らせて測る」測定器に徹する。AI が富岳へ入らない代わりに、`results/<jobid>/` に `meta.json`、`build.log`、`stdout.txt`、`stderr.txt`、`resource.txt`、`status.txt` などを残し、手元の AI がローカルファイルだけを読めば富岳上の状態を把握できるようにしている。
 
-`docs/design-rebuild.md` は歴史的文書で、冒頭に「現状は `mpiFCCpx` 既定・4テンプレ(skeleton/stencil/stencil_blocked/search)構成」と注意がある。古い記述として `src/main.cpp` や「3バイナリ」などが残るため、現状確認には `README.md`、`docs/design-infra.md`、`docs/repository-overview.html` を優先する。
+`docs/design-rebuild.md` は歴史的文書で、冒頭に「現状は `mpiFCCpx` 既定・4テンプレ(skeleton/stencil/stencil_blocked/search) + contest I/O 雛形構成」と注意がある。古い記述として `src/main.cpp` や「3バイナリ」などが残るため、現状確認には `README.md`、`docs/design-infra.md`、`docs/repository-overview.html` を優先する。
 
 ## 3. アーキテクチャ全体像
 
@@ -352,8 +352,8 @@ make clean
 
 `tools/check-mpi.sh` は OpenMPI があるローカル環境で、4ランク検証を行う。
 
-- stencil: 1ランクと4ランクの最終 sum が一致するか。
-- stencil_blocked: plain stencil と blocked が一致するか。
+- stencil: 1ランクと4ランクの最終 `sum/sumsq/chk` が一致するか。
+- stencil_blocked: plain stencil と blocked の `sum/sumsq/chk` が一致するか。
 - skeleton: `MPI_Allreduce` で4ランク分が集約されるか。
 - search: `MPI_MAXLOC + Bcast` がデッドロックせず、`result.txt` を出すか。
 

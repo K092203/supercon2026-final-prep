@@ -5,7 +5,7 @@
 **ステータス**: 実装済（2026-06-23 時点の設計記録＝**歴史的文書**）
 
 > ⚠️ 本書は再構築**当時**の記録です。`src/main.cpp`(変更前スタブ)、コンパイラ名 `mpiFCC`、
-> 「3 バイナリ」等は当時の記述で、**現状は `mpiFCCpx` 既定・4 テンプレ(skeleton/stencil/stencil_blocked/search)構成**。
+> 「3 バイナリ」等は当時の記述で、**現状は `mpiFCCpx` 既定・4 テンプレ(skeleton/stencil/stencil_blocked/search) + contest I/O 雛形構成**。
 > 最新の実態は [README.md](../README.md) / [design-infra.md](design-infra.md) / [repository-overview.html](repository-overview.html) を参照。
 
 > **範囲**: 本書は **C++ テンプレート**の設計。テンプレート以外(WSL↔富岳インフラ /

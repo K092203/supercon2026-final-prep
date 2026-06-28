@@ -28,7 +28,7 @@ rsync -avz --delete "$REPO_ROOT/src/" "$FUGAKU_HOST:$FUGAKU_REMOTE_DIR/src/"
 rsync -avz "$REPO_ROOT/Makefile" "$FUGAKU_HOST:$FUGAKU_REMOTE_DIR/"
 
 echo "=== [2/2] build: make fugaku BUDGET_SEC=$BUDGET_SEC (ログインノード)"
-# ビルド出力をログへ集約 (fetch が build.log として回収 → mpiFCC エラーを AI が読める)。
+# ビルド出力をログへ集約 (fetch が build.log として回収 → mpiFCCpx エラーを AI が読める)。
 # パイプを避け make の終了コードを直接取る (非bash ログインシェルでも PIPESTATUS に
 # 依存せず build 失敗を確実に検出する)。
 REMOTE_BUILD_LOG="$FUGAKU_REMOTE_DIR/results/_build/build-latest.log"

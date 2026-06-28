@@ -2,7 +2,7 @@
 # WSL2↔富岳 開発ループ ワンショット実行
 # 使い方: tools/fugaku-run.sh <target> [budget_sec]
 #   target:     skeleton | stencil | stencil-blocked | search | contest
-#   budget_sec: 時間予算 (秒)。デフォルト 1750 (本選 30分=1800 - 50秒マージン。値は当日確認)
+#   budget_sec: 時間予算 (秒)。デフォルト 1750 (本選 30分=1800 - 50秒マージン。値は当日確認)（※ 投入時の安全弁マージンは別に FUGAKU_ELAPSE_MARGIN_SEC=30。BUDGET 算出の目安50s とは別物）
 #
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 本戦初日セットアップ (初回のみ。以降は不要)

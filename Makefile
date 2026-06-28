@@ -63,7 +63,7 @@ test-contest: contest
 
 # ---------- ローカル MPI 検証 (富岳前に MPI 経路を 4 ランクで確認) ----------
 # 要 OpenMPI: sudo apt-get install -y openmpi-bin libopenmpi-dev
-#   make local-mpi  → build/mpi/{skeleton,stencil,search} (mpic++ / -DUSE_MPI)
+#   make local-mpi  → build/mpi/{skeleton,stencil,stencil_blocked,search} (mpic++ / -DUSE_MPI)
 #   make test-mpi   → 4 ランクでハロ交換 / MAXLOC+Bcast / Allreduce を自動検証
 CXX_MPI    = mpic++
 FLAGS_MPI  = -std=c++17 -O2 -fopenmp -Wall -Wextra -DUSE_MPI -Isrc $(BUDGET_OVERRIDE)

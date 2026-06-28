@@ -97,7 +97,7 @@ results/
 └── latest/          ← 最新ジョブへのシンボリックリンク
     ├── meta.json    ← 全部入りヘッダ (config+source+build+resource+outcome。最初に読む)
     ├── build.log    ← mpiFCCpx ビルド出力 (富士通clang エラー/警告)
-    ├── stdout.txt   ← プログラム出力 ([stencil] sum=... 等)
+    ├── stdout.txt   ← プログラム出力 ([stencil] sum=... sumsq=... chk=... 等)
     ├── stderr.txt   ← 実行時エラー・MPI エラー
     ├── resource.txt ← /usr/bin/time -v (最大RSS / 実wall / CPU%)
     ├── status.txt   ← completed exit=.. wall_sec=.. (無ければ PJM kill で未完)

@@ -76,7 +76,7 @@ make clean
 ```
 [env] ranks=1 threads/rank=12 total_cores=12 host=your-host
 [result] in_circle=25746986855  elapsed=5.000s    # skeleton (Monte Carlo)
-[stencil] sum=1.234567e+03  steps=200/200  5.001s # stencil
+[stencil] sum=1.234567e+03 sumsq=1.234567e+03 chk=1.234567e+10  steps=200/200  5.001s # stencil
 [search] best=12.345678  ranks=1 threads=12       # search
 ```
 
@@ -270,7 +270,7 @@ final-prep/
 - [ ] `Irecv` → 内部計算 → `Waitall` の順で通信/計算オーバーラップ（stencil 実装済み）
 - [ ] 評価を差分 `delta()` で行う（全評価 O(N²) を避ける）
 - [ ] `MPI_MAXLOC` + `Bcast` で全体ベストを効率的に同期
-- [ ] 入力が 8MB 超なら `utilities.hpp` の `IBUF_SIZE` を増やす（既定 64MB。超過時は stderr 警告）
+- [ ] 入力が 64MB 超なら `utilities.hpp` の `IBUF_SIZE` を増やす（既定 64MB。超過時は stderr 警告）
 - [ ] `BUDGET_SEC` は当日の実行時間制限を確認して `make fugaku BUDGET_SEC=…` で上書き（時間内に必ず出力）
 
 ---

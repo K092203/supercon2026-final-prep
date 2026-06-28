@@ -8,7 +8,7 @@
 //   make contest         && ./build/contest < tests/sample_01.in   # ローカル
 //   make test-contest                                              # sample_01 で実行
 //   bash tests/judge.sh tests                                      # *.in/*.out 一括判定
-//   make contest-fugaku                                            # 富岳 (mpiFCC)
+//   make contest-fugaku                                            # 富岳 (mpiFCCpx)
 //
 // 配線のポイント (当日はここだけ意識すれば動く):
 //   1) fastio::init() を最初に 1 回   … stdin を一括読み込み (大入力は IBUF_SIZE 調整)
@@ -32,22 +32,26 @@ int main(int argc, char** argv) {
 #endif
     double t0 = wtime();
 
-    // ---- 1) 入力読み込み (CUSTOMIZE: 課題フォーマットに合わせる) ----
-    fastio::init();
-    int n = fastio::ri();
-    std::vector<int> a(n > 0 ? n : 0);
-    for (int i = 0; i < n; ++i) a[i] = fastio::ri();
-
-    // ---- 2) 解く (CUSTOMIZE: ここを課題アルゴリズムに置換) ----
-    //   例: 合計と最大値を OpenMP リダクションで求める
-    long long sum = 0;
-    int mx = INT_MIN;
-    #pragma omp parallel for reduction(+:sum) reduction(max:mx) schedule(static)
-    for (int i = 0; i < n; ++i) { sum += a[i]; if (a[i] > mx) mx = a[i]; }
-    if (n == 0) mx = 0;
-
-    // ---- 3) 出力 (CUSTOMIZE: 課題フォーマットに合わせる。rank0 のみ書く) ----
+    // ⚠️ MPI: mpiexec は通常 rank0 のみに stdin を流す。本サンプルは「rank0 が直列に
+    //    読む→解く→書く」I/O 配線デモなので、入出力は rank0 のみで行う(他ランクは待機)。
+    //    実際に並列化する課題では rank0 で読んだ後 MPI_Bcast(n) → データ配布 → MPI_Reduce で集約すること。
+    //    Day1: 富岳 mpiexec が stdin を rank0 へ確実に流すかを実機確認する。
     if (rank == 0) {
+        // ---- 1) 入力読み込み (CUSTOMIZE: 課題フォーマットに合わせる) ----
+        fastio::init();
+        int n = fastio::ri();
+        std::vector<int> a(n > 0 ? n : 0);
+        for (int i = 0; i < n; ++i) a[i] = fastio::ri();
+
+        // ---- 2) 解く (CUSTOMIZE: ここを課題アルゴリズムに置換) ----
+        //   例: 合計と最大値を OpenMP リダクションで求める
+        long long sum = 0;
+        int mx = INT_MIN;
+        #pragma omp parallel for reduction(+:sum) reduction(max:mx) schedule(static)
+        for (int i = 0; i < n; ++i) { sum += a[i]; if (a[i] > mx) mx = a[i]; }
+        if (n == 0) mx = 0;
+
+        // ---- 3) 出力 (CUSTOMIZE: 課題フォーマットに合わせる。rank0 のみ書く) ----
         fastio::wll(sum);
         fastio::wc(' ');
         fastio::wi(mx);

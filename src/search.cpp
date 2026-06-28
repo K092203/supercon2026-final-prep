@@ -5,7 +5,7 @@
 //               Graph Golf('16) / 変形テトリス('14) など組合せ最適化全般。
 // ---------------------------------------------------------------------
 // 富岳:
-//   mpiFCC -Nclang -Ofast -Kfast,openmp -DUSE_MPI search.cpp -o build/fugaku/search
+//   mpiFCCpx -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512 -DUSE_MPI search.cpp -o build/fugaku/search
 // ローカル単一プロセス検証:
 //   g++ -O2 -fopenmp -std=c++17 search.cpp -o build/search
 //

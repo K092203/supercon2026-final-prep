@@ -114,7 +114,7 @@ id,elapsed,correct,score,exit_code,rep_done,notes
 | 層 | 例 | 振り方 |
 |---|---|---|
 | **① リビルド要** | flagset, `-D` 定数（stencil_blocked の **BT/RB/CB**）, stride | ログインノードで**事前ビルド**し、configs の `bin` 列で選択 |
-| **② ジオメトリ（ピン留め敏感）** | **ranks×omp** | **別ジョブで少数点**だけ測る。各点で `make test-mpi` 相当のピン留め検証 |
+| **② ジオメトリ（ピン留め敏感）** | **ranks×omp** | **別ジョブで少数点**だけ測る。各点で `make test-mpi` 相当のピン留め検証。`TUNE_EXPECT_RANKS` を渡すと逸脱を警告 |
 | **③ 連続な内側ノブ** | sa_temp, cooling, block, pad | **1 ジョブ内バッチ掃引**（LHS/GP の本来の獲物） |
 
 > ②を 1 ジョブ内で気軽に掃引しないこと。`max-proc-per-node` は submit 時固定で、`1rank×48` と `4rank×12`
@@ -222,5 +222,5 @@ results.csv を読んで `tell` し、次ラウンドの configs.tsv を出す R
 
 **コードで塞がない残リスク(運用で対処)**:
 - `correct` の偽陽性 → 当日 problem 固有の検証器を必ず配線(§8)。未知課題では汎用検証不能。
-- `--cooling abc` 等の非数値 arg は atof=0 で silent(主要罠のフラグ/空値/空 env は対策済み)。
+- 数値 arg は `strtod`/`strtoll`+endptr で全体検証し、非数値(`--cooling abc`)・空フラグ・空値・空 env はすべて既定値へ倒す(対策済み。`tune_args.hpp` getf/geti)。
 - objective を round 間で切替えると incumbent 上書き(仕様)。

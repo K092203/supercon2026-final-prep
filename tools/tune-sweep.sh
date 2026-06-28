@@ -74,6 +74,9 @@ while IFS=$'\t' read -r id target bin ranks omp rep args || [ -n "${id:-}" ]; do
     n_total=$((n_total+1))
     args="${args:-}"
     ranks=$(posint "id=$id ranks" "${ranks:-1}")
+    if [ -n "${TUNE_EXPECT_RANKS:-}" ] && [ "$ranks" != "$TUNE_EXPECT_RANKS" ]; then
+        echo "[tune-sweep] WARN id=$id ranks=$ranks が想定($TUNE_EXPECT_RANKS)と相違。max-proc-per-node は投入時固定のため mis-pin の恐れ。" >&2
+    fi
     omp=$(posint   "id=$id omp"   "${omp:-1}")
     rep=$(posint   "id=$id rep"   "${rep:-1}")
 
