@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  local:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev python3
+
+      - name: Build and test
+        run: |
+          make
+          make local-mpi
+          make test-mpi
+          make contest
+          bash tests/judge.sh tests
+
+      - name: Check Python syntax
+        run: python3 -m py_compile tools/*.py
+
+      - name: Check shell syntax
+        run: bash -n tools/*.sh scripts/*.sh tests/*.sh
