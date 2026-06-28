@@ -282,7 +282,7 @@ tools/fugaku-tune.sh configs.tsv 1750 max-score</code></pre>
     <div class="card"><h4>堅牢性</h4><span class="sub">敵対的テストで多数の入力異常(CRLF/不正値/crash偽陽性等)を修正済</span></div>
     <div class="card"><h4>Codex セカンドオピニオン</h4><span class="sub">Codex CLI(OpenAI)を read-only で独立レビュー/検証に利用。Claude と同一情報を読み、トークンを分散</span></div>
   </div>
-  <div class="note">main には PR #1〜#6 がマージ済み(autotuneハーネス/snapshot、富岳コマンド準拠強化、Codex導入、C++バグ修正、ハーネス堅牢化、HTML総覧)。<span class="badge b-ok">確認済(git log)</span></div>
+  <div class="note">main には autotune ハーネス/snapshot、富岳コマンド準拠強化、Codex 連携、C++ バグ修正、ハーネス堅牢化、検証ループ群(gen_small_cases/validate_output/solver_naive/stress/save_candidate)、config 検証の共通化などを継続的にマージ済み(最新は git log 参照)。<span class="badge b-ok">確認済(git log)</span></div>
 
   <!-- 9 -->
   <h2 id="s9">9. 現状の課題</h2>
