@@ -84,3 +84,20 @@ python3 tools/stress.py --fast ./build/fast --naive ./build/naive --mode exact -
 | ビルド失敗 | `build.log` |
 | どのコードの結果か不明 | `meta.json`（commit/dirty/input_sha256） |
 | 直近ジョブID | `results/.last-jobid` |
+
+---
+
+## 6. 詰まった時の脱出ルート（当日コピペ）
+
+事前に作り込まず、必要になった時だけここから即対応する。
+
+| 状況 | 脱出ルート |
+|---|---|
+| ローカルで MPI がハング | `--omp 2 --ranks 2` で（48スレッド過剰サブスクライブ回避）。富岳実機は `4×12` で起きない |
+| ステンシルのブロッキングを振りたい | `docs/autotune.md` §6.1 の変種一括ビルド（BT/RB/CB を `-D`）→ `configs.tsv` の `bin` で掃引 |
+| 予算内に終わらない / PJM kill | `BUDGET_SEC` と `FUGAKU_ELAPSE` を当日制限に合わせる（`BUDGET+30s<=ELAPSE`）。`search` は内側ループも締切を見る |
+| 構築/最適化で正解が一意でない | stress は `--mode valid-only`（+`--validator`）。完全一致は使わない |
+| 出力が WA だが原因が見えない（空間問題） | 富岳に matplotlib は無い。まず `validate_output.py` の制約チェックで機械的に弾く方が速い。目視が要るならローカルで小ケースを `python3` で文字描画（当日その場で書く） |
+| 入力が 64MB 超で切り捨てエラー | `src/utilities.hpp` の `IBUF_SIZE` を増やして再ビルド |
+| 実験の記録 | `docs/experiments.md` §E に「仮説→結果→次の一手」を1行。数値は `meta.json` が自動記録 |
+| 提出候補を失いたくない | valid を確認するたび `tools/save_candidate.sh <label> results/latest "理由"` |

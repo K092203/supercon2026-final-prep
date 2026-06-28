@@ -117,6 +117,33 @@ id,elapsed,correct,score,exit_code,rep_done,notes
 > ②を 1 ジョブ内で気軽に掃引しないこと。`max-proc-per-node` は submit 時固定で、`1rank×48` と `4rank×12`
 > は `OMP_PLACES/PROC_BIND` の効き方が別物。mis-pin すると帯域が出ず、その悪い数字が GP/incumbent を汚染する。
 
+### 6.1 リビルド層の変種を一括ビルド（当日コピペ用・検証済み）
+
+`BT/RB/CB` は `#ifndef` ガード付きなので `-D` で安全に上書きできる（既定 BT=4/RB=128/CB=256）。
+変種を**別バイナリ**として事前ビルドし、`configs.tsv` の `bin` 列で選べば ① を ③ と同じ掃引に載せられる。
+
+```bash
+# 富岳向けに BT×(RB,CB) の変種を一括ビルド (ログインノードで)
+mkdir -p build/fugaku
+for bt in 1 2 4; do for rbcb in "128 256" "256 256"; do
+  set -- $rbcb; rb=$1; cb=$2
+  name="stencil_blocked_bt${bt}_rb${rb}_cb${cb}"
+  mpiFCCpx -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512 -DUSE_MPI -Isrc \
+    -DBT=$bt -DRB=$rb -DCB=$cb src/stencil_blocked.cpp -o build/fugaku/$name
+done; done
+```
+
+```text
+# configs.tsv は bin 列にこの name を入れるだけ (target は stencil_blocked のまま)
+id    target           bin                               ranks omp rep args
+000   stencil_blocked  stencil_blocked_bt1_rb128_cb256   4     12  2
+001   stencil_blocked  stencil_blocked_bt2_rb128_cb256   4     12  2
+002   stencil_blocked  stencil_blocked_bt4_rb256_cb256   4     12  2
+```
+
+> ローカル検証は `mpiFCCpx`→`g++ -std=c++17 -O2 -fopenmp` に置換すれば同じパターンで通る（実証済み）。
+> `BT=1` は plain stencil と等価なので、変種群に必ず混ぜて回帰の基準点にする。
+
 ---
 
 ## 7. ローカルリハの注意（検証で判明した実挙動）
