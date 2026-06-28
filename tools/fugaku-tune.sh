@@ -106,4 +106,4 @@ echo "--- results.csv ---"; cat "$LOCAL_RDIR/results.csv" 2>/dev/null || echo "(
 "$SCRIPT_DIR/update_incumbent.py" "$LOCAL_RDIR" --objective "$OBJECTIVE" \
   --state "$REPO_ROOT/state/incumbent.json"
 echo ""
-echo ">>> incumbent: state/incumbent.json / 結果: results/$ROUND/ (latest-tune)"
+echo ">>> incumbent: state/incumbent.json / 結果: results/tune/$ROUND/ (latest-tune)"

@@ -3,7 +3,7 @@
 //   MPI + OpenMP ハイブリッド / 高分解能計測 / スレッド毎高速乱数 / 時間予算
 // ---------------------------------------------------------------------
 // 富岳 (富士通 clang モード):
-//   mpiFCC -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512
+//   mpiFCCpx -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512
 //          -DUSE_MPI skeleton.cpp -o build/fugaku/skeleton
 // GCC 系:
 //   mpic++ -O3 -fopenmp -mcpu=a64fx -msve-vector-bits=512
@@ -22,7 +22,7 @@
 //   ② make skeleton && ./build/skeleton            # ローカル5秒確認
 //   ③ tools/fugaku-run.sh skeleton <BUDGET_SEC>    # 富岳へ投入
 //   ⚠️ BUDGET_SEC は当日の実行時間制限を確認して上書き (README既定1750は仮の値)
-//   ⚠️ 入力が 8MB 超になるなら utilities.hpp の IBUF_SIZE を増やす (既定64MB)
+//   ⚠️ 入力が 64MB 超になるなら utilities.hpp の IBUF_SIZE を増やす (既定64MB)
 // ─────────────────────────────────────────────────────────────────────
 #include "common.hpp"
 #include "tune_args.hpp"

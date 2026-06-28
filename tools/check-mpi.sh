@@ -32,31 +32,49 @@ mpic++ $FLAGS -DBUDGET_SEC=120 src/stencil_blocked.cpp -o build/mpi/stencil_bloc
 mpic++ $FLAGS -DBUDGET_SEC=3   src/skeleton.cpp        -o build/mpi/skeleton        || exit 1
 mpic++ $FLAGS -DBUDGET_SEC=3   src/search.cpp          -o build/mpi/search          || exit 1
 
+extract3(){ # 出力文字列 → "sum sumsq chk"
+  printf '%s %s %s' \
+    "$(grep -oP 'sum=\K[0-9.eE+-]+'   <<<"$1")" \
+    "$(grep -oP 'sumsq=\K[0-9.eE+-]+' <<<"$1")" \
+    "$(grep -oP 'chk=\K[0-9.eE+-]+'   <<<"$1")"
+}
+close3(){ # "$1"=3値 "$2"=3値、全要素 相対誤差<1e-3 なら exit 0
+  python3 - "$1" "$2" <<'PY'
+import sys
+a, b = sys.argv[1].split(), sys.argv[2].split()
+if len(a) != 3 or len(b) != 3: sys.exit(1)
+for x, y in zip(a, b):
+    try: fx, fy = float(x), float(y)
+    except ValueError: sys.exit(1)
+    if abs(fx - fy) / max(abs(fx), 1e-30) >= 1e-3: sys.exit(1)
+sys.exit(0)
+PY
+}
+
 FAIL=0
 
 echo ""
-echo "== [1/4] stencil: ハロ交換の正しさ (n=1 と n=4 の最終 sum 一致) =="
+echo "== [1/4] stencil: ハロ交換の正しさ (n=1 と n=4 の最終 sum/sumsq/chk 一致) =="
 O1=$($MPIRUN -n 1 build/mpi/stencil)
 O4=$($MPIRUN -n 4 build/mpi/stencil)
-S1=$(grep -oP 'sum=\K[0-9.eE+-]+' <<<"$O1")
-S4=$(grep -oP 'sum=\K[0-9.eE+-]+' <<<"$O4")
+V1=$(extract3 "$O1")
+V4=$(extract3 "$O4")
 ST1=$(grep -oP 'steps=\K[0-9]+/[0-9]+' <<<"$O1")
 ST4=$(grep -oP 'steps=\K[0-9]+/[0-9]+' <<<"$O4")
-echo "  n=1: sum=$S1 steps=$ST1"
-echo "  n=4: sum=$S4 steps=$ST4"
-if [ -n "$S1" ] && [ -n "$S4" ] && \
-   python3 -c "import sys;a,b=float('$S1'),float('$S4');sys.exit(0 if abs(a-b)/max(abs(a),1e-30)<1e-3 else 1)"; then
+echo "  n=1: sum/sumsq/chk=$V1 steps=$ST1"
+echo "  n=4: sum/sumsq/chk=$V4 steps=$ST4"
+if [ -n "$V1" ] && close3 "$V1" "$V4"; then
     echo "  [PASS] ハロ交換 OK (分割数によらず結果が一致)"
 else
-    echo "  [FAIL] sum 不一致 → ハロ交換 / 領域分割にバグ"; FAIL=1
+    echo "  [FAIL] sum/sumsq/chk 不一致 → ハロ交換 / 領域分割にバグ"; FAIL=1
 fi
 
 echo ""
 echo "== [2/4] stencil_blocked: 温度ブロッキングが plain と一致するか (n=4) =="
-SB=$(grep -oP 'sum=\K[0-9.eE+-]+' <<<"$($MPIRUN -n 4 build/mpi/stencil_blocked)")
-echo "  plain n=4 sum=$S4 / blocked n=4 sum=$SB"
-if [ -n "$S4" ] && [ -n "$SB" ] && \
-   python3 -c "import sys;a,b=float('$S4'),float('$SB');sys.exit(0 if abs(a-b)/max(abs(a),1e-30)<1e-3 else 1)"; then
+OB=$($MPIRUN -n 4 build/mpi/stencil_blocked)
+VB=$(extract3 "$OB")
+echo "  plain n=4 sum/sumsq/chk=$V4 / blocked n=4 sum/sumsq/chk=$VB"
+if close3 "$V4" "$VB"; then
     echo "  [PASS] 温度ブロッキング OK (plain と同一結果)"
 else
     echo "  [FAIL] blocked が plain と不一致 → タイル/deep-halo にバグ"; FAIL=1

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 富岳にジョブを投入し JOBID を返す
-# 使い方: tools/fugaku-submit.sh <target> [budget_sec]
-#   target: skeleton | stencil | search
+# 使い方: tools/fugaku-submit.sh <target> [budget_sec] [input_file]
+#   target: skeleton | stencil | stencil_blocked | search | contest
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -138,6 +138,7 @@ TIMED=""
 if /usr/bin/time -v -o /dev/null true >/dev/null 2>&1; then
   TIMED="/usr/bin/time -v -o \${RESULTS}/resource.txt"
 fi
+cd "\${RESULTS}"   # search 等が CWD へ書く成果物(result.txt)を回収対象に入れる
 START=\$(date +%s)
 \${TIMED} mpiexec -n ${FUGAKU_MPI_RANKS} \\
   "${FUGAKU_REMOTE_DIR}/build/fugaku/${TARGET}" \\

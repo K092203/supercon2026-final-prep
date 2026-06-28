@@ -3,7 +3,7 @@
 #   pad/steps   : stencil・stencil_blocked とも runtime 引数 --pad/--steps を読むので
 #                 同じ steps/pad で公平に比較できる(以前 blocked は無視していたのを修正済)。
 #   ※ stencil_blocked の BT/RB/CB は -D 定数(リビルド層)。これらを振るには別バイナリ化が必要で、
-#     follow-up の tools/build_variants.sh + autotune/spaces/stencil_blocked.tsv で bin 列に列挙する。
+#     BT/RB/CB を振るには docs/autotune.md §6.1 のインライン一括ビルドで別バイナリ化し bin 列に列挙する。
 # 目的関数は min-elapsed 推奨 (ステンシルは速度律速。score はチェックサムで確認用)。
 bin     choice  stencil  stencil_blocked
 pad     pow2    1        16

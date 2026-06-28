@@ -77,31 +77,39 @@ namespace fastio {
         skip_ws();
         int x = 0, s = 1;
         if (ipos < ilen && ibuf[ipos] == '-') { s = -1; ++ipos; }
-        while (ipos < ilen && (unsigned char)ibuf[ipos] >= '0') x = x * 10 + (ibuf[ipos++] - '0');
+        while (ipos < ilen && (unsigned char)ibuf[ipos] >= '0' && (unsigned char)ibuf[ipos] <= '9') x = x * 10 + (ibuf[ipos++] - '0');
         return x * s;
     }
     inline long long rll() {
         skip_ws();
         long long x = 0; int s = 1;
         if (ipos < ilen && ibuf[ipos] == '-') { s = -1; ++ipos; }
-        while (ipos < ilen && (unsigned char)ibuf[ipos] >= '0') x = x * 10 + (ibuf[ipos++] - '0');
+        while (ipos < ilen && (unsigned char)ibuf[ipos] >= '0' && (unsigned char)ibuf[ipos] <= '9') x = x * 10 + (ibuf[ipos++] - '0');
         return x * s;
     }
     inline double rf() {
         skip_ws();
-        double x = 0; int s = 1, frac = 0; double scale = 1.0;
+        double x = 0; int s = 1;
         if (ipos < ilen && ibuf[ipos] == '-') { s = -1; ++ipos; }
-        while (ipos < ilen && ibuf[ipos] != '.') {
-            if ((unsigned char)ibuf[ipos] < '0') break;
+        else if (ipos < ilen && ibuf[ipos] == '+') { ++ipos; }
+        // 整数部
+        while (ipos < ilen && (unsigned char)ibuf[ipos] >= '0' && (unsigned char)ibuf[ipos] <= '9')
             x = x * 10 + (ibuf[ipos++] - '0');
-        }
+        // 小数部
         if (ipos < ilen && ibuf[ipos] == '.') {
-            ++ipos;
-            while (ipos < ilen && (unsigned char)ibuf[ipos] >= '0') {
+            ++ipos; double scale = 1.0;
+            while (ipos < ilen && (unsigned char)ibuf[ipos] >= '0' && (unsigned char)ibuf[ipos] <= '9') {
                 x = x * 10 + (ibuf[ipos++] - '0'); scale *= 10;
-                (void)frac;
             }
             x /= scale;
+        }
+        // 指数部 [eE][+-]?digits
+        if (ipos < ilen && (ibuf[ipos] == 'e' || ibuf[ipos] == 'E')) {
+            ++ipos; int es = 1, e = 0;
+            if (ipos < ilen && (ibuf[ipos] == '+' || ibuf[ipos] == '-')) { if (ibuf[ipos] == '-') es = -1; ++ipos; }
+            while (ipos < ilen && (unsigned char)ibuf[ipos] >= '0' && (unsigned char)ibuf[ipos] <= '9')
+                e = e * 10 + (ibuf[ipos++] - '0');
+            x *= std::pow(10.0, (double)(es * e));
         }
         return x * s;
     }
@@ -163,6 +171,7 @@ struct Budget {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ビット演算ユーティリティ
 //   OpenMP + ビット演算を組み合わせた BFS/集合演算に使う
+//   ⚠️ ctz32/clz32/msb32 は x==0 で未定義動作。空集合(0)を渡さないこと。
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 inline int popcnt(unsigned int x)        { return __builtin_popcount(x); }
 inline int popcnt(unsigned long long x)  { return __builtin_popcountll(x); }

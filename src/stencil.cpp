@@ -4,7 +4,7 @@
 //   対象課題例: ライフゲーム('99) / 化学振動('15) / 森林火災('24) / 拡散・波動系
 // ---------------------------------------------------------------------
 // 富岳:
-//   mpiFCC -Nclang -Ofast -Kfast,openmp,simd -msve-vector-bits=512
+//   mpiFCCpx -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512
 //          -DUSE_MPI stencil.cpp -o build/fugaku/stencil
 // ローカル単一プロセス検証:
 //   g++ -O2 -fopenmp -std=c++17 stencil.cpp -o build/stencil
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
     }
     // 初期値: global 行 H/2 の中央帯に種を撒く。
     // ※ global 座標で撒くことで分割数 (nranks) に依存しない初期条件になる。
-    //   → `make test-mpi` で n=1 と n=4 の最終 sum が一致するか比較でき、ハロ交換の正しさを検証できる。
+    //   → `make test-mpi` で n=1 と n=4 の最終 sum/sumsq/chk が一致するか比較でき、ハロ交換の正しさを検証できる。
     int row0_global = rank * base + std::min(rank, rem); // このランク先頭の global 行番号
     const int seed_grow = H / 2;
     if (seed_grow >= row0_global && seed_grow < row0_global + lh) {
@@ -145,22 +145,28 @@ int main(int argc, char** argv) {
         }
     }
 
-    // 全格子の総和を確認用に集約
-    double local_sum = 0.0;
-    #pragma omp parallel for reduction(+:local_sum) schedule(static)
+    // 3 種のチェックサムで確認用に集約 (stencil_blocked と同一定義 → check-mpi で 3 値比較)。
+    //   sum=質量 / sumsq=エネルギー / chk=位置重み(場の形まで弁別)。
+    double loc[3] = {0, 0, 0};
+    #pragma omp parallel for reduction(+:loc[:3]) schedule(static)
     for (int i = 1; i <= lh; ++i) {
+        const int gr = row0_global + (i - 1);          // global 行 (分割非依存)
         const float* __restrict c = &a[(size_t)i * stride];
-        for (int j = 0; j < W; ++j) local_sum += c[j];
+        for (int j = 0; j < W; ++j) {
+            double x = c[j];
+            loc[0] += x; loc[1] += x * x; loc[2] += x * ((double)gr * W + j);
+        }
     }
-    double total = local_sum;
+    double tot[3] = {loc[0], loc[1], loc[2]};
 #ifdef USE_MPI
-    MPI_Reduce(&local_sum, &total, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(loc, tot, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 #endif
     double elapsed = wtime() - t0;
     if (rank == 0) {
-        std::printf("[stencil] sum=%.6e  steps=%d/%d  %.3fs\n", total, final_step, STEPS, elapsed);
-        // correct = 規定 STEPS を完了したか (deadline 切れ=未完=0)。score は確認用チェックサム。
-        tune::report(total, (final_step >= STEPS) ? 1 : 0, elapsed);
+        std::printf("[stencil] sum=%.6e sumsq=%.6e chk=%.6e  steps=%d/%d  %.3fs\n",
+                    tot[0], tot[1], tot[2], final_step, STEPS, elapsed);
+        // correct = 規定 STEPS を完了したか。score は確認用チェックサム(sum)。
+        tune::report(tot[0], (final_step >= STEPS) ? 1 : 0, elapsed);
     }
 
 #ifdef USE_MPI

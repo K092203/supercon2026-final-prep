@@ -30,7 +30,7 @@ rsync -az "$FUGAKU_HOST:$FUGAKU_REMOTE_DIR/results/_build/build-latest.log" \
 # --- スナップショットから状態を抽出 (meta.json 1つで全体を掴めるように) ---
 EXIT_CODE=$(cat "$LOCAL_DIR/exit_code.txt" 2>/dev/null || echo "")
 [[ "$EXIT_CODE"  =~ ^-?[0-9]+$ ]] || EXIT_CODE=null
-[[ "$BUDGET_SEC" =~ ^[0-9]+$ ]]   || BUDGET_SEC=null
+[[ "$BUDGET_SEC" =~ ^[0-9]+([.][0-9]+)?$ ]]   || BUDGET_SEC=null
 COMMIT=$(sed -n 's/.*commit=\([^ ]*\).*/\1/p' "$LOCAL_DIR/meta.txt"  2>/dev/null | head -1); COMMIT="${COMMIT:-unknown}"
 DIRTY=$(sed -n 's/.*dirty=\([0-9]*\).*/\1/p'  "$LOCAL_DIR/meta.txt"  2>/dev/null | head -1); DIRTY="${DIRTY:-0}"
 WALL=$(sed -n 's/.*wall_sec=\([0-9]*\).*/\1/p' "$LOCAL_DIR/status.txt" 2>/dev/null | head -1); WALL="${WALL:-null}"

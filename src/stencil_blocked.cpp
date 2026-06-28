@@ -7,7 +7,7 @@
 //     BT ステップ進めるごとに有効領域が 1 ずつ縮む。BT 後にタイル本体が正しくなる。
 //   MPI: ランク境界は BT 段の deep-halo を BT ステップごとに 1 回だけ交換 (通信回避)。
 // ---------------------------------------------------------------------
-// 富岳:  mpiFCC -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512
+// 富岳:  mpiFCCpx -Nclang -Ofast -Kfast,openmp,simd,zfill -msve-vector-bits=512
 //               -DUSE_MPI stencil_blocked.cpp -o build/fugaku/stencil_blocked
 // ローカル: g++ -O2 -fopenmp -std=c++17 stencil_blocked.cpp -o build/stencil_blocked
 //
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
         float* __restrict pb = &b[(size_t)i * stride];
         for (int j = 0; j < W; ++j) { pa[j] = 0.0f; pb[j] = 0.0f; }
     }
-    // 種まき: global 行 H/2 の中央帯 (stencil.cpp と同一 → sum を直接比較できる)
+    // 種まき: global 行 H/2 の中央帯 (stencil.cpp と同一 → sum/sumsq/chk を直接比較できる)
     const int row0_global = rank * base + std::min(rank, rem);
     const int seed_grow = H / 2;
     if (seed_grow >= row0_global && seed_grow < row0_global + lh) {
