@@ -26,9 +26,12 @@ CUSTOMIZED = False
 # 単独トークンとして現れたら不正とみなすデバッグ語 ("debugger" 等は誤検知しない)
 BAD_EXACT = {"DEBUG", "debug", "TODO"}
 # 非有限の数値 (大文字小文字・符号ゆれを吸収。"infinite"/"nanny" は誤検知しない)
-NONFINITE = {"nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"}
+NONFINITE = {"nan", "-nan", "+nan", "inf", "+inf", "-inf",
+             "infinity", "+infinity", "-infinity"}
 # デバッグ行の先頭マーカー (この接頭辞で始まるトークンは混入とみなす)
 BAD_PREFIXES = ("#TUNE", "[search]", "[stencil]", "[result]", "[env]")
+# トークン端の区切り記号 (例 "DEBUG:" "nan," を芯で判定するため除去する)
+STRIP_CHARS = ":;,.()[]{}<>\"'"
 
 
 def fail(msg):
@@ -55,11 +58,12 @@ def parse_output(path):
     if not tokens:
         fail("出力が空")
     for tok in tokens:
-        if tok in BAD_EXACT:
+        core = tok.strip(STRIP_CHARS)   # 端の区切り記号を除いた芯 ("DEBUG:"→"DEBUG", "nan,"→"nan")
+        if tok in BAD_EXACT or core in BAD_EXACT:
             fail(f"出力にデバッグトークン混入: {tok!r}")
-        if tok.lower() in NONFINITE:
+        if tok.lower() in NONFINITE or core.lower() in NONFINITE:
             fail(f"出力に非有限数値: {tok!r}")
-        if tok.startswith(BAD_PREFIXES):
+        if tok.startswith(BAD_PREFIXES) or core.startswith(BAD_PREFIXES):
             fail(f"出力にデバッグ行混入: {tok!r}")
     return tokens
 
