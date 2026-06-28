@@ -18,6 +18,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/fugaku-config.env"
+source "$SCRIPT_DIR/fugaku-validate.sh"   # config 値の fail-closed 検証 (sed 置換前に)
 
 CONFIGS="${1:?usage: fugaku-tune.sh <configs.tsv> [budget_sec] [objective] [input_file]}"
 BUDGET="${2:-1750}"
@@ -56,6 +57,14 @@ if [ -n "$INPUT" ]; then
     REMOTE_INPUT="$FUGAKU_REMOTE_DIR/results/tune/$ROUND/input.dat"
 fi
 
+# opt-in な PJM ノブ / module (config 未設定なら空 → 生成ジョブは現状と一致=ゼロ回帰)。
+# submit と同じ式で算出し、単発 submit と tune の実行環境を揃える。
+PJM_LLIO="";  [ -n "${FUGAKU_LLIO_VOL:-}" ]   && PJM_LLIO="#PJM -x PJM_LLIO_GFSCACHE=${FUGAKU_LLIO_VOL}"
+PJM_FREQ="";  [ -n "${FUGAKU_FREQ:-}" ]       && PJM_FREQ="#PJM -L \"freq=${FUGAKU_FREQ}\""
+PJM_THR="";   [ -n "${FUGAKU_THROTTLING:-}" ] && PJM_THR="#PJM -L \"throttling_state=${FUGAKU_THROTTLING}\""
+PJM_SPATH=""; [ -n "${FUGAKU_SPATH:-}" ]      && PJM_SPATH="#PJM --spath \"${FUGAKU_SPATH}\""
+MODLOAD_JOB=""; [ -n "${FUGAKU_MODULES:-}" ]  && MODLOAD_JOB="module load ${FUGAKU_MODULES}"
+
 # [3] テンプレのトークンを埋めてジョブ生成
 JOB=$(sed \
   -e "s|__RSCGRP__|${FUGAKU_RSCGRP}|g" \
@@ -68,6 +77,11 @@ JOB=$(sed \
   -e "s|__ROUND__|${ROUND}|g" \
   -e "s|__BUDGET__|${BUDGET}|g" \
   -e "s|__INPUT__|${REMOTE_INPUT}|g" \
+  -e "s|__PJM_LLIO__|${PJM_LLIO}|g" \
+  -e "s|__PJM_FREQ__|${PJM_FREQ}|g" \
+  -e "s|__PJM_THR__|${PJM_THR}|g" \
+  -e "s|__PJM_SPATH__|${PJM_SPATH}|g" \
+  -e "s|__MODLOAD__|${MODLOAD_JOB}|g" \
   "$REPO_ROOT/jobs/tune.pjm.template")
 
 # [4] 投入 → JOBID

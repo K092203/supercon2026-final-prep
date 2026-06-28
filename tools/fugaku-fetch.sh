@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/fugaku-config.env"
+source "$SCRIPT_DIR/fugaku-validate.sh"   # config 値の fail-closed 検証
 
 JOBID="${1:-$(cat "$REPO_ROOT/results/.last-jobid" 2>/dev/null || echo '')}"
 TARGET="${2:-unknown}"
